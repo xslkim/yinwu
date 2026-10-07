@@ -35,5 +35,11 @@
 /tvgun-tv/local.properties
 /tvgun-tv/debug.keystore
 
+# 放行：container 线的文档（排除 Winlator 源码克隆与构建产物）
+!/container/
+/container/*
+!/container/PROGRESS.md
+!/container/BUILD.md
+
 # 放行忽略规则本身
 !.gitignore
