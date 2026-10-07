@@ -1,0 +1,18 @@
+{
+  "id": "aliens-extermination",
+  "displayName": "Aliens Extermination",
+  "notes": "1846/GameProfiles/AliensExtermination.xml + UserProfiles: EmulationProfile=AliensExtermination, EmulatorType=TeknoParrot, ExecutableName='aliens.exe;aliens dehasped.exe'. HookedWindows.txt lists 'Aliens: Extermination'. Full-auto weapon: tune clickHoldMs for sustained fire.",
+  "windowTitleRegex": "Aliens: Extermination",
+  "processNames": [ "aliens", "aliens dehasped" ],
+  "triggerButton": "left",
+  "reloadStrategy": "none",
+  "clickHoldMs": 30,
+  "teknoParrotIniPath": "D:\\yinwu\\Aliens-Extermination\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F6E4451A-A57B-441A-9EFB-5DCCC818F6C4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TvgunBridge.Core", "src\TvgunBridge.Core\TvgunBridge.Core.csproj", "{E13CD21E-611A-4E41-AAE3-CA684A4A7A40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TvgunBridge.App", "src\TvgunBridge.App\TvgunBridge.App.csproj", "{A4407633-BC5F-4C82-B622-56A250626DDC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TvgunBridge.ReplayClient", "src\TvgunBridge.ReplayClient\TvgunBridge.ReplayClient.csproj", "{CB31BE71-EE52-4C54-A6A8-893918AFDA6D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{96CA161C-A3CE-4BF9-AFAD-3606F4DBBB95}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TvgunBridge.Tests", "tests\TvgunBridge.Tests\TvgunBridge.Tests.csproj", "{BDBB0B77-63DF-46A0-B296-6FAF10DB0441}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E13CD21E-611A-4E41-AAE3-CA684A4A7A40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E13CD21E-611A-4E41-AAE3-CA684A4A7A40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E13CD21E-611A-4E41-AAE3-CA684A4A7A40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E13CD21E-611A-4E41-AAE3-CA684A4A7A40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4407633-BC5F-4C82-B622-56A250626DDC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4407633-BC5F-4C82-B622-56A250626DDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4407633-BC5F-4C82-B622-56A250626DDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4407633-BC5F-4C82-B622-56A250626DDC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB31BE71-EE52-4C54-A6A8-893918AFDA6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB31BE71-EE52-4C54-A6A8-893918AFDA6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB31BE71-EE52-4C54-A6A8-893918AFDA6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB31BE71-EE52-4C54-A6A8-893918AFDA6D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BDBB0B77-63DF-46A0-B296-6FAF10DB0441}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BDBB0B77-63DF-46A0-B296-6FAF10DB0441}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BDBB0B77-63DF-46A0-B296-6FAF10DB0441}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BDBB0B77-63DF-46A0-B296-6FAF10DB0441}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E13CD21E-611A-4E41-AAE3-CA684A4A7A40} = {F6E4451A-A57B-441A-9EFB-5DCCC818F6C4}
+		{A4407633-BC5F-4C82-B622-56A250626DDC} = {F6E4451A-A57B-441A-9EFB-5DCCC818F6C4}
+		{CB31BE71-EE52-4C54-A6A8-893918AFDA6D} = {F6E4451A-A57B-441A-9EFB-5DCCC818F6C4}
+		{BDBB0B77-63DF-46A0-B296-6FAF10DB0441} = {96CA161C-A3CE-4BF9-AFAD-3606F4DBBB95}
+	EndGlobalSection
+EndGlobal

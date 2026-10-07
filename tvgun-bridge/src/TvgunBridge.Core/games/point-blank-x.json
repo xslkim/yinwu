@@ -1,0 +1,17 @@
+{
+  "id": "point-blank-x",
+  "displayName": "Point Blank X",
+  "notes": "1846/GameProfiles/PointBlankX.xml: EmulationProfile=PointBlankX, EmulatorType=TeknoParrot, ExecutableName=PBX100-2-NA-MPR0-A63.exe.",
+  "windowTitleRegex": "(?i)point\\s*blank|PBX100",
+  "processNames": [ "PBX100-2-NA-MPR0-A63" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Point Blank X\\Point Blank X\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "big-buck-hunter-pro",
+  "displayName": "Big Buck Hunter Pro",
+  "notes": "1846/GameProfiles/BBHPro.xml + UserProfiles/BBHPro.xml: EmulationProfile=RawThrillsGUN, EmulatorType=ElfLdr2, ExecutableName=game. HookedWindows.txt lists 'TeknoBudgie - Big Buck Hunter Pro'. Pump-action reload -> right click.",
+  "windowTitleRegex": "Big Buck Hunter Pro",
+  "processNames": [ "game" ],
+  "triggerButton": "left",
+  "reloadStrategy": "rightClick",
+  "teknoParrotIniPath": "D:\\yinwu\\Big Bug Hunter Pro\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}
