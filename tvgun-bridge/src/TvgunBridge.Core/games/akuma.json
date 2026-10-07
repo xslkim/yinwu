@@ -1,0 +1,17 @@
+{
+  "id": "akuma",
+  "displayName": "Akuma",
+  "notes": "UserProfiles/Akuma.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=game.exe. HookedWindows.txt 无对应条目,窗口标题按目录名推测,待人工核对.",
+  "windowTitleRegex": "(?i)akuma",
+  "processNames": [ "game" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Akuma\\Akuma\\data\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

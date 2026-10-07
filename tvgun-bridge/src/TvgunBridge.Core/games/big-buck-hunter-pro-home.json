@@ -1,0 +1,17 @@
+{
+  "id": "big-buck-hunter-pro-home",
+  "displayName": "Big Buck Hunter Pro Home",
+  "notes": "UserProfiles/BBHHome.xml: EmulationProfile=RawThrillsGUN, EmulatorType=ElfLdr2, GunGame=true, ExecutableName=game (ELF,窗口由 BudgieLoader 创建). HookedWindows.txt 仅列 'TeknoBudgie - Big Buck Hunter Pro',无 Home 版专属条目,窗口标题可能与 Pro 版相同,待人工核对. Pump-action reload -> right click.",
+  "windowTitleRegex": "Big Buck Hunter Pro",
+  "processNames": [ "game", "TeknoBudgie" ],
+  "triggerButton": "left",
+  "reloadStrategy": "rightClick",
+  "teknoParrotIniPath": "D:\\yinwu\\Big Buck Hunter Pro Home\\Big Buck Hunter Pro Home\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

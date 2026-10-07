@@ -1,0 +1,17 @@
+{
+  "id": "coopers-9",
+  "displayName": "Cooper's 9",
+  "notes": "UserProfiles/Coopers9.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=game.exe. HookedWindows.txt lists \"TeknoParrot - COOPER'S 9\".",
+  "windowTitleRegex": "TeknoParrot - COOPER'S 9",
+  "processNames": [ "game" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Cooper's 9\\Cooper's 9\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

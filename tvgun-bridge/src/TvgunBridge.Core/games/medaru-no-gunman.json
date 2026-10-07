@@ -1,0 +1,17 @@
+{
+  "id": "medaru-no-gunman",
+  "displayName": "Medaru No Gunman",
+  "notes": "UserProfiles/MedaruNoGunman.xml: EmulationProfile=FarCry, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=gunman_dxF.exe. HookedWindows.txt lists 'Medal no Gunman'.",
+  "windowTitleRegex": "Medal no Gunman",
+  "processNames": [ "gunman_dxF" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Medaru No Gunman\\Medaru No Gunman\\exe\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

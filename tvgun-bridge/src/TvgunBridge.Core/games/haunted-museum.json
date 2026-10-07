@@ -6,7 +6,7 @@
   "processNames": [ "game" ],
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
-  "teknoParrotIniPath": "D:\\yinwu\\Haunted Museum\\teknoparrot.ini",
+  "teknoParrotIniPath": "D:\\yinwu\\Haunted Museum\\Haunted Museum\\teknoparrot.ini",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

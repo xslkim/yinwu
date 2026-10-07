@@ -1,0 +1,17 @@
+{
+  "id": "omatsuri-yasan-kingyo-sukui",
+  "displayName": "Omatsuri Yasan: Kingyo Sukui",
+  "notes": "UserProfiles/OmatsuriYasanKingyoSukui.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=cvgame.exe. HookedWindows.txt lists 'TeknoParrot - Omatsuri Yasan: Kingyo Sukui'.",
+  "windowTitleRegex": "TeknoParrot - Omatsuri Yasan: Kingyo Sukui",
+  "processNames": [ "cvgame" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Omatsuri Yasan - Kingyo Sukui\\Omatsuri Yasan - Kingyo Sukui\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

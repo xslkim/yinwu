@@ -1,0 +1,17 @@
+{
+  "id": "gashaaaan",
+  "displayName": "Gashaaaan!!!!",
+  "notes": "UserProfiles/Gashaaaan.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=ballshooting.exe. HookedWindows.txt lists 'TeknoParrot - GASHAAAAN'.",
+  "windowTitleRegex": "TeknoParrot - GASHAAAAN$",
+  "processNames": [ "ballshooting" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Gashaaaan!!!!\\Gashaaaan!!!!\\F24\\bin\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

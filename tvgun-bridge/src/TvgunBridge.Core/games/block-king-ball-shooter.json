@@ -1,0 +1,17 @@
+{
+  "id": "block-king-ball-shooter",
+  "displayName": "Block King Ball Shooter",
+  "notes": "UserProfiles/BlockKing.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=game.exe. HookedWindows.txt lists 'TeknoParrot - Block King'.",
+  "windowTitleRegex": "TeknoParrot - Block King",
+  "processNames": [ "game" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Block King Ball Shooter\\Block King Ball Shooter\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

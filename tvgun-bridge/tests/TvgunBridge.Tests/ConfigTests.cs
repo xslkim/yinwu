@@ -114,10 +114,10 @@ public class GameAdapterTests
         new(Directory.EnumerateFiles(GamesDir, "*.json").Select(Path.GetFileName)!);
 
     [Fact]
-    public void FiveGameAdaptersAreShipped()
+    public void AllGameAdaptersAreShipped()
     {
         Assert.True(Directory.Exists(GamesDir), $"games directory not found at {GamesDir}");
-        Assert.Equal(5, Directory.EnumerateFiles(GamesDir, "*.json").Count());
+        Assert.Equal(27, Directory.EnumerateFiles(GamesDir, "*.json").Count());
     }
 
     [Theory]
@@ -137,6 +137,27 @@ public class GameAdapterTests
         Assert.Equal("1", general["Windowed"]);
         Assert.Equal("1", general["HideCursor"]);
         Assert.Equal("RawInput", general["Input API"]);
+    }
+
+    /// <summary>
+    /// The adapter INI paths are absolute paths on the development machine (D:\yinwu).
+    /// This test is only meaningful there; elsewhere it returns early so CI stays portable.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GameFiles))]
+    public void TeknoParrotIniPathParentDirectoryExists(string fileName)
+    {
+        if (!Directory.Exists(@"D:\yinwu"))
+        {
+            return; // skip: game library not present on this machine
+        }
+
+        var adapter = GameAdapter.Load(Path.Combine(GamesDir, fileName));
+        Assert.False(string.IsNullOrWhiteSpace(adapter.TeknoParrotIniPath));
+
+        var parent = Path.GetDirectoryName(adapter.TeknoParrotIniPath);
+        Assert.True(parent is not null && Directory.Exists(parent),
+            $"{adapter.Id}: ini parent directory missing: {parent}");
     }
 
     [Fact]

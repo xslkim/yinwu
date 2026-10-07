@@ -1,0 +1,17 @@
+{
+  "id": "wild-west-shootout",
+  "displayName": "Wild West Shootout",
+  "notes": "UserProfiles/WildWestShootout.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=CowBoy.exe. HookedWindows.txt lists 'TeknoParrot - Wild West Shootout'.",
+  "windowTitleRegex": "TeknoParrot - Wild West Shootout",
+  "processNames": [ "CowBoy" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Wild West Shootout\\Wild West Shootout\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

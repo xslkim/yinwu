@@ -1,0 +1,17 @@
+{
+  "id": "vampire-night",
+  "displayName": "Vampire Night",
+  "notes": "UserProfiles/vnight.xml: EmulationProfile=PlayInput, EmulatorType=Play(PS2 基板 Play! 模拟器), ExecutableName=vnight.zip. HookedWindows.txt lists 'Play! - [ VPNGAME/TC3LOAD/TC4LOAD/CBRLOAD ]'. 经 Play! 模拟器,输入链路不同,需真机验证. GunCon 类默认屏外开枪换弹.",
+  "windowTitleRegex": "Play! - \\[ (VPNGAME|TC3LOAD|TC4LOAD|CBRLOAD) \\]",
+  "processNames": [ "Play", "vnight" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Vampire Night\\Vampire Night\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

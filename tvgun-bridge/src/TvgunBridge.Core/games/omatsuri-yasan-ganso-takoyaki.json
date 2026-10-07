@@ -1,0 +1,17 @@
+{
+  "id": "omatsuri-yasan-ganso-takoyaki",
+  "displayName": "Omatsuri Yasan: Ganso Takoyaki",
+  "notes": "UserProfiles/OmatsuriYasanGansoTakoyaki.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=cvgame.exe. HookedWindows.txt lists 'TeknoParrot - Omatsuri Yasan: Ganso Takoyaki'.",
+  "windowTitleRegex": "TeknoParrot - Omatsuri Yasan: Ganso Takoyaki",
+  "processNames": [ "cvgame" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Omatsuri Yasan - Ganso Takoyaki\\Omatsuri Yasan - Ganso Takoyaki\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

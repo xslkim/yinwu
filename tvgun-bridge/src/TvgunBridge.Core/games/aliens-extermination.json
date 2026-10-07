@@ -7,7 +7,7 @@
   "triggerButton": "left",
   "reloadStrategy": "none",
   "clickHoldMs": 30,
-  "teknoParrotIniPath": "D:\\yinwu\\Aliens-Extermination\\teknoparrot.ini",
+  "teknoParrotIniPath": "D:\\yinwu\\Aliens-Extermination\\Aliens-Extermination\\DATA\\teknoparrot.ini",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

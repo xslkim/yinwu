@@ -1,0 +1,17 @@
+{
+  "id": "friction",
+  "displayName": "Friction",
+  "notes": "UserProfiles/Friction.xml: EmulationProfile=Friction, EmulatorType=OpenParrot, GunGame=true, ExecutableName=Friction.exe. HookedWindows.txt lists 'OpenParrot - Friction'.",
+  "windowTitleRegex": "OpenParrot - Friction",
+  "processNames": [ "Friction" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Friction\\Friction\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

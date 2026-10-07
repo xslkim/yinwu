@@ -1,0 +1,17 @@
+{
+  "id": "bug-busters",
+  "displayName": "Bug Busters",
+  "notes": "UserProfiles/BugBusters.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=BBPC.exe. HookedWindows.txt lists 'TeknoParrot - Bug Busters'.",
+  "windowTitleRegex": "TeknoParrot - Bug Busters",
+  "processNames": [ "BBPC" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Bug Busters\\Bug Busters\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

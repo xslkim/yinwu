@@ -1,0 +1,17 @@
+{
+  "id": "primeval-hunt",
+  "displayName": "Primeval Hunt",
+  "notes": "UserProfiles/Primevil.xml: EmulationProfile=PrimevalHunt, EmulatorType=ElfLdr2, GunGame=true, ExecutableName=main.exe. HookedWindows.txt lists 'TeknoBudgie - Primeval Hunt'.",
+  "windowTitleRegex": "TeknoBudgie - Primeval Hunt",
+  "processNames": [ "main", "TeknoBudgie" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Primeval Hunt\\Primeval Hunt\\disk0\\prog\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

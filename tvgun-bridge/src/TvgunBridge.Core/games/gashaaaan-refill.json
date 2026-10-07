@@ -1,0 +1,17 @@
+{
+  "id": "gashaaaan-refill",
+  "displayName": "Gashaaaan Refill!",
+  "notes": "UserProfiles/Gashaaaan2.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=gasya.exe. HookedWindows.txt lists 'TeknoParrot - GASHAAAAN Refill!' 与 'GASHAAAAN2'.",
+  "windowTitleRegex": "GASHAAAAN Refill|GASHAAAAN2",
+  "processNames": [ "gasya" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Gashaaaan Refill!\\Gashaaaan Refill!\\IG2\\exec_root\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

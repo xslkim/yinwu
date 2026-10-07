@@ -1,0 +1,17 @@
+{
+  "id": "action-deka",
+  "displayName": "Action Deka",
+  "notes": "UserProfiles/ActionDeka.xml: EmulationProfile=WartranTroopers(复用,非 Wartran Troopers 本游戏), EmulatorType=TeknoParrot, GunGame=true, ExecutableName=deka.exe. HookedWindows.txt lists 'ACTION-DEKA [14:38:35 Mar 27 2008]'.",
+  "windowTitleRegex": "ACTION-DEKA",
+  "processNames": [ "deka" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Action Deka\\Action Deka\\GDK\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

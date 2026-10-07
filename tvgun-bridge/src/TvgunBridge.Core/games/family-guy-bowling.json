@@ -1,0 +1,17 @@
+{
+  "id": "family-guy-bowling",
+  "displayName": "Family Guy Bowling",
+  "notes": "UserProfiles/FamilyGuyBowling.xml: EmulationProfile=RawThrillsGUN, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=bowling.exe. HookedWindows.txt lists 'TeknoParrot - Family Guy Bowling'.",
+  "windowTitleRegex": "TeknoParrot - Family Guy Bowling",
+  "processNames": [ "bowling" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Family Guy Bowling\\Family Guy Bowling\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

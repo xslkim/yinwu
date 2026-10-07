@@ -1,0 +1,17 @@
+{
+  "id": "byonbyon",
+  "displayName": "ByonByon",
+  "notes": "UserProfiles/ByonByon.xml: EmulationProfile=WartranTroopers, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=byy.exe. HookedWindows.txt lists 'TeknoParrot - BYON-BYON'.",
+  "windowTitleRegex": "TeknoParrot - BYON-BYON",
+  "processNames": [ "byy" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\ByonByon\\ByonByon\\bin\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

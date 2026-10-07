@@ -1,12 +1,12 @@
 {
   "id": "ghost-squad-evolution",
   "displayName": "Ghost Squad Evolution",
-  "notes": "1846/GameProfiles/GSEVO.xml: EmulationProfile=GSEVO, EmulatorType=Lindbergh, ExecutableName=vsg. HookedWindows.txt lists 'TeknoBudgie - Ghost Squad Evo'.",
-  "windowTitleRegex": "TeknoBudgie|(?i)vsg",
+  "notes": "1846/UserProfiles/GSEVO.xml + GameProfiles/GSEVO.xml: EmulationProfile=GSEVO, EmulatorType=Lindbergh, GunGame=true, ExecutableName=vsg (ELF,窗口由 BudgieLoader 创建). HookedWindows.txt lists 'TeknoBudgie - Ghost Squad Evo'.",
+  "windowTitleRegex": "TeknoBudgie - Ghost Squad Evo",
   "processNames": [ "vsg", "TeknoBudgie" ],
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
-  "teknoParrotIniPath": "D:\\yinwu\\Ghost Squad Evolution\\teknoparrot.ini",
+  "teknoParrotIniPath": "D:\\yinwu\\Ghost Squad Evolution\\Ghost Squad Evolution\\vsg_l\\teknoparrot.ini",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

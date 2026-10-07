@@ -1,0 +1,17 @@
+{
+  "id": "after-dark",
+  "displayName": "After Dark",
+  "notes": "UserProfiles/AfterDark.xml: EmulationProfile=WartranTroopers(复用,注意区分), EmulatorType=TeknoParrot, GunGame=true, ExecutableName=GamePlayer.exe. HookedWindows.txt lists 'TeknoParrot - After Dark'; 区别于 AfterDark2(qumo2_en.exe) 的 'Night Hunter - After Dark, Chapter II'.",
+  "windowTitleRegex": "TeknoParrot - After Dark$",
+  "processNames": [ "GamePlayer" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\After Dark\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

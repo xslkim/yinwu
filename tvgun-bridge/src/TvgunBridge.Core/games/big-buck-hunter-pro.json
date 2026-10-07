@@ -1,12 +1,12 @@
 {
   "id": "big-buck-hunter-pro",
   "displayName": "Big Buck Hunter Pro",
-  "notes": "1846/GameProfiles/BBHPro.xml + UserProfiles/BBHPro.xml: EmulationProfile=RawThrillsGUN, EmulatorType=ElfLdr2, ExecutableName=game. HookedWindows.txt lists 'TeknoBudgie - Big Buck Hunter Pro'. Pump-action reload -> right click.",
-  "windowTitleRegex": "Big Buck Hunter Pro",
-  "processNames": [ "game" ],
+  "notes": "1846/UserProfiles/BBHPro.xml + GameProfiles/BBHPro.xml: EmulationProfile=RawThrillsGUN, EmulatorType=ElfLdr2, GunGame=true, ExecutableName=game (ELF,窗口由 BudgieLoader 创建). HookedWindows.txt lists 'TeknoBudgie - Big Buck Hunter Pro'. Pump-action reload -> right click. 目录名 'Big Bug Hunter Pro' 已核实为真实目录(UserProfile GamePath 一致),非拼写错误.",
+  "windowTitleRegex": "TeknoBudgie - Big Buck Hunter Pro",
+  "processNames": [ "game", "TeknoBudgie" ],
   "triggerButton": "left",
   "reloadStrategy": "rightClick",
-  "teknoParrotIniPath": "D:\\yinwu\\Big Bug Hunter Pro\\teknoparrot.ini",
+  "teknoParrotIniPath": "D:\\yinwu\\Big Bug Hunter Pro\\Big Bug Hunter Pro\\teknoparrot.ini",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

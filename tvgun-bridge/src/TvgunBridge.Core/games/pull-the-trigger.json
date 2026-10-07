@@ -1,0 +1,17 @@
+{
+  "id": "pull-the-trigger",
+  "displayName": "Pull The Trigger!",
+  "notes": "UserProfiles/PullTheTrigger.xml: EmulationProfile=RawThrillsGUN, EmulatorType=TeknoParrot, GunGame=true, ExecutableName=PTW.exe. HookedWindows.txt lists 'TeknoParrot - Pull The Trigger!'.",
+  "windowTitleRegex": "TeknoParrot - Pull The Trigger!",
+  "processNames": [ "PTW" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Pull The Trigger\\Pull The Trigger\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}

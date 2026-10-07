@@ -17,7 +17,7 @@
   - [x] T1.3 SendInput 注入器——Core 已完成（见前次日志）
   - [x] T1.4 坐标引擎 + 两点校准——Core 已完成；校准向导 UI（CalibrationWindow）App 层已实现，待真机联调
   - [ ] T1.5 GSEVO 全链路里程碑验收——待真机联调
-- [ ] M2 多游戏适配 + 手感参数化 + 热键 + 稳定性（T2.1-T2.5）——5 款游戏 GameAdapter JSON 与 TeknoParrotIniWriter 已就绪
+- [ ] M2 多游戏适配 + 手感参数化 + 热键 + 稳定性（T2.1-T2.5）——27 款游戏 GameAdapter JSON 与 TeknoParrotIniWriter 已就绪
   - [x] T2.1/T2.2 游戏选择下拉 + ReloadStrategy 接线（rightClick→右键换弹、offscreenShot→屏外带钳制开枪）+ teknoparrot.ini 写入——App 层已实现，待真机联调
   - [x] T2.3 本地热键兜底（WH_KEYBOARD_LL：F5 投币/F6 开始/F7 注入开关/F8 显隐窗口，投币/开始键与热键可在 hotkeys.json 配置；HTTP /coin /start /reload → KeyTap 链路）——App 层已实现，待真机联调
   - [ ] T2.4 手感调优——待真机联调
@@ -58,7 +58,7 @@
 - ~~修复 App/Input/HotkeySettings.cs 编译错误~~（已在 App 层工作中修复，全解决方案 build 恢复 0 警告 0 错误；最终集成验证已复核 `using System.IO;` 存在）。
 - 真机联调清单（App 层全部待真机验证）：叠加窗跟随/点击穿透、无边框铺满、校准向导、自检打鸭子、热键 F5-F8、HTTP /coin /start /reload → 按键链路、ReloadStrategy 双策略。
 - Windowing 三块与 SendInputInjector 真机验证（单测不覆盖真实桌面；Windows 上 HttpListener 绑 "+" 需管理员或 `netsh http add urlacl url=http://+:8000/`，App 已在绑定失败时于主窗口显示该命令，不崩溃）。
-- Big Buck Hunter Pro 的 teknoParrotIniPath 指向 "Big Bug Hunter Pro" 目录（拼写存疑），首次实机联调时核对。
+- ~~Big Buck Hunter Pro 的 teknoParrotIniPath 指向 "Big Bug Hunter Pro" 目录（拼写存疑），首次实机联调时核对。~~ 已核实：两个目录都真实存在，非拼写错误（见 2026-10-07 适配补全日志）。
 - ReplayClient 真机对照：与真机同时打同一游戏，对比 aim 流与 shot 时序（需真机环境）。
 - ~~未 git commit，由后续统一提交。~~ 已提交并推送 main（见下方最终集成验证日志）。
 
@@ -68,6 +68,21 @@
   - 输出一致性核对：App / Core / Tests 三个输出目录均含 games/*.json 5 个游戏适配文件。
   - CLI 冒烟（闭环真人模拟，未启动 WPF App）：`dotnet test --filter E2E_FullChainTests|E2E_ReplayClientTests` 10/10 通过（127.0.0.1 回环全链路 + ReplayClient 子进程）；`dotnet run --project src/TvgunBridge.ReplayClient -- --discover --port 49211` 对空端口 2s 超时退出码 2，符合预期。
   - git：.gitignore 白名单放行 tvgun-bridge（排除 bin/obj），随本次提交推送 origin/main。
+
+- 2026-10-07 **游戏适配补全：5 款 → 27 款（M2 多游戏适配取证落地）**：
+  - 数据源：`1846/UserProfiles/*.xml`（27 个，含 GamePath/ExecutableName/EmulatorType/GunGame）为主，`1846/GameProfiles/*.xml` 与 `1846/HookedWindows.txt`（窗口标题名单）为辅，逐款核对游戏目录内 exe/ELF 与 teknoparrot.ini 实际位置。
+  - games/*.json 由 5 款扩至 27 款（新增 22 款；更新 4 款的 teknoParrotIniPath 指向 exe 所在真实目录：ghost-squad-evolution→vsg_l、big-buck-hunter-pro→Big Bug Hunter Pro\Big Bug Hunter Pro、aliens-extermination→DATA、haunted-museum→Haunted Museum 子目录；point-blank-x 原有路径已正确未动）。全部统一写 `[General] Windowed=1, HideCursor=1, Input API=RawInput`。
+  - 目录名核对结论：D:\yinwu 下 "Big Buck Hunter Pro Home" 与 "Big Bug Hunter Pro" **两个目录都真实存在**，分别对应 UserProfiles/BBHHome.xml 与 BBHPro.xml 的 GamePath——既有 big-buck-hunter-pro.json 的 "Big Bug Hunter Pro" 不是拼写错误，仅补全为 exe 所在子目录；新增 big-buck-hunter-pro-home.json 对应 Home 版（该条历史遗留核对项关闭）。
+  - 换弹策略：光枪游戏默认 offscreenShot；Big Buck Hunter Pro / Pro Home（泵动）rightClick；Aliens Extermination（全自动）none+clickHoldMs=30。
+  - 特殊案例：vampire-night 走 Play! 模拟器（EmulatorType=Play，PS2 基板），窗口标题取自 HookedWindows.txt 的 `Play! - [ VPNGAME/TC3LOAD/TC4LOAD/CBRLOAD ]`，notes 标注"输入链路不同，需真机验证"；after-dark 的 EmulationProfile 复用 WartranTroopers，已在 notes 区分（并区别于 AfterDark2 的 Night Hunter 版）。
+  - 测试：ConfigTests 由"5 款"改为遍历全部 games/*.json 断言反序列化 + 必填字段；新增 TeknoParrotIniPathParentDirectoryExists（每款断言 ini 父目录真实存在，D:\yinwu 不存在时直接返回跳过，保证 CI 可移植）。**build 0 警告 0 错误，dotnet test 139/139 通过**（90 + 22 新增反序列化用例 + 27 ini 目录用例）。
+
+### 待人工核对（适配参数无法从本地取证确定）
+
+- akuma：HookedWindows.txt 无对应窗口标题条目，windowTitleRegex 暂按目录名 `(?i)akuma` 推测，需实机确认。
+- big-buck-hunter-pro-home：HookedWindows.txt 仅有 Pro 版条目，Home 版窗口标题暂用 "Big Buck Hunter Pro"（可能与 Pro 版相同），需实机确认。
+- vampire-night：Play! 模拟器输入链路（非 TeknoParrot RawInput 直注），换弹/开枪链路需真机验证；processNames 中 "Play" 为推测的模拟器进程名。
+- go-go-strike / family-guy-bowling（保龄类）与 medaru-no-gunman（FarCry 基板）的换弹方式暂按光枪默认 offscreenShot，实机若不同再调。
 
 ## 最终状态
 
@@ -86,6 +101,6 @@
 - 自检打鸭子、热键 F5-F8、HTTP /coin /start /reload → KeyTap 链路、ReloadStrategy 双策略实机效果。
 - T2.5 异常稳定性实机验证：拔线停移、关游戏叠加隐藏、退出 UndoAll 无残留。
 - HttpListener 绑 "+" 需管理员或 `netsh http add urlacl url=http://+:8000/ user=<当前用户>`（App 绑定失败时会在主窗口显示该命令）。
-- Big Buck Hunter Pro 的 teknoParrotIniPath 目录拼写核对（"Big Bug Hunter Pro" 存疑）。
+- ~~Big Buck Hunter Pro 的 teknoParrotIniPath 目录拼写核对（"Big Bug Hunter Pro" 存疑）。~~ 已核实非拼写错误，Home/Pro 两款均已适配。
 - ReplayClient 与真机同打一局对照 aim 流与 shot 时序。
 - TeknoParrot 启动顺序：先启桥接器 App 选游戏 → 再经 TeknoParrot 启动游戏（写 ini 已自动化，首次核对备份 .bak）。

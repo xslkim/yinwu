@@ -1,0 +1,17 @@
+{
+  "id": "go-go-strike",
+  "displayName": "Go Go Strike",
+  "notes": "UserProfiles/GoGoStrike.xml: EmulationProfile=RawThrillsGUN, EmulatorType=ElfLdr2, GunGame=true, ExecutableName=bowling_usa (ELF). HookedWindows.txt lists 'TeknoParrot - Go Go Strike'.",
+  "windowTitleRegex": "TeknoParrot - Go Go Strike",
+  "processNames": [ "bowling_usa" ],
+  "triggerButton": "left",
+  "reloadStrategy": "offscreenShot",
+  "teknoParrotIniPath": "D:\\yinwu\\Go Go Strike\\Go Go Strike\\teknoparrot.ini",
+  "teknoParrotIniValues": {
+    "General": {
+      "Windowed": "1",
+      "HideCursor": "1",
+      "Input API": "RawInput"
+    }
+  }
+}
