@@ -5,6 +5,7 @@
 
 ## 里程碑状态
 
+- [x] 一键启动闭环验收（2026-10-08，桥接链路全绿；真实游戏步骤受桌面锁定环境限制，详见工作日志）
 - [x] M0 桥接器骨架 + 协议服务 + 回放闭环（T0.1-T0.4）
   - [x] T0.1 解决方案骨架（Core / App / ReplayClient / Tests）
   - [x] T0.2 Core 协议服务（UDP aim / HTTP /shot / 发现应答）——Core 部分完成
@@ -127,3 +128,42 @@
 - 新增 `tools/test-launchers.sh`：dry-run 后断言 28 个 bat（27 游戏 + 大厅）、每个含正确 `--game <id>` 与 `--profile=<xml>`、纯 CRLF（CR 字节数 == LF 行数）、纯 ASCII。注意本机 grep 的 -P 完全不可用（任何 locale 下 exit 2），字节级断言改用 tr/wc 实现。**PASS**。
 - 落盘验证：27 个 `启动游戏.bat` 逐一 python 断言（存在/CRLF/ASCII/id/profile 四元组），`file` 抽查为 "DOS batch file, ASCII text, with CRLF"。未执行 bat（UAC/起游戏属集成验证，留给下一棒）。
 - .gitignore 增加 `!/游戏大厅.bat` 白名单；游戏目录内 bat 依既有 `/*` 规则不入库。
+
+## 2026-10-08 一键启动最终集成验收（真实游戏闭环 + 假窗口兜底）
+
+### 构建与回归
+
+- `dotnet build -c Release`：**0 警告 0 错误**；`dotnet test`：**196/196 通过**。
+- 滞留本地 commit `fc09553`（App 一键启动）已推送 origin/main（github.com 直连被运营商/GFW 间歇重置，5 次重试后网络恢复推送成功）。
+
+### 真实游戏闭环（tools/e2e-realgame.sh，GSEVO）
+
+- 脚本全自动执行两遍（run1/run2），**日志级断言全部通过**：SERVER_LISTENING(1s) → INI_WRITTEN → WINDOW_FOUND(22s，Lindbergh 启动慢) → BORDERLESS_APPLIED+OVERLAY_SHOWN(0s) → ReplayClient circle 60Hz×5s+3 枪全 `{"hit":true}`（p50 1.3ms）→ /exit→EXIT_KEY_SENT(0s) → SHUTDOWN reason=game_exited → 桥接器进程退出。截图与日志存 `out/e2e/<run>/`（已被 .gitignore 排除）。
+- **环境受限告警（重要）**：验收期间本机桌面处于**锁屏状态**（LogonUI.exe 常驻，截图只能拍到锁屏界面）。对照实验（不发 /exit 观察 90s）证实：**锁屏下游戏窗口出现后约 25s 会自行退出**（图形初始化失败），即两遍运行里的 `game_ate_esc` 退出路径是游戏自行退出，**不能作为 ESC 注入生效的因果证据**。锁屏下 SendInput 也无法到达游戏。
+- 已为脚本增加步骤 0"桌面会话未锁定（LogonUI 检测）"：锁屏时直接 FAIL 并提示改用兜底脚本，防止锁屏环境跑出假阳性 PASS。**待桌面解锁后需重跑 `bash tools/e2e-realgame.sh` 两遍完成最终签字验收。**
+
+### 假窗口兜底闭环（tools/e2e-fakewindow.sh，锁屏/CI 可用）
+
+- 用 PowerShell WinForms 起标题恰为 `TeknoBudgie - Ghost Squad Evo` 的 1920×1080 假窗口，跑两遍（fake1/fake2）**全绿**（各 11/11 步）：SERVER_LISTENING → WINDOW_FOUND(0s) → BORDERLESS_APPLIED+OVERLAY_SHOWN → ReplayClient 3/3 枪（p50 1.9ms）→ /exit→EXIT_KEY_SENT 且**假窗口存活 15s 内桥接器不误退**（验证 exit-after-game 不误触发）→ 关窗 → GAME_LOST(1s) → SHUTDOWN reason=game_exited(10s 宽限) → 进程退出。两遍结果一致（幂等）。
+- 兜底证据 bridge.log 摘录（fake2）：
+  ```
+  00:57:21.205 SERVER_LISTENING port=8000
+  00:57:22.708 WINDOW_FOUND title="TeknoBudgie - Ghost Squad Evo" hwnd=0x1E0BCE
+  00:57:22.711 BORDERLESS_APPLIED hwnd=0x1E0BCE
+  00:57:22.825 OVERLAY_SHOWN
+  00:57:29.006 EXIT_KEY_SENT
+  00:57:44.721 GAME_LOST
+  00:57:55.233 SHUTDOWN reason=game_exited
+  ```
+
+### 工程收尾
+
+- `.gitignore` 补 `/tvgun-bridge/out/` 排除（`!/tvgun-bridge/**` 白名单会误收截图，已用 `git check-ignore` 双向验证：out/ 被排除、tools/ 被收）。
+- 两个脚本均带 EXIT trap 全量 taskkill（桥接器/TeknoParrotUi/TeknoBudgie/BudgieLoader/vsg），失败时自动 dump bridge.log 尾部与进程列表。
+- README 用户操作改为"双击游戏目录里的 `启动游戏.bat`"。
+
+### 遗留事项（下一棒）
+
+- **桌面解锁后重跑 `bash tools/e2e-realgame.sh --run run1` 与 `--run run2`**：验证解锁环境下游戏不自行退出、ESC 由游戏真正消费（对照实验已给出锁屏基线：25s 自退）、截图为真实游戏画面。
+- 锁屏根因待查（ScreenSaveActive=1，疑手动 Win+L 或 idle 策略；无管理员权限无法改）。
+- 手机端（D:\tvgun commit cd66285）远程未配置，保持本地。

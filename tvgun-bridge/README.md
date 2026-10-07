@@ -36,6 +36,10 @@ dotnet run --project src/TvgunBridge.ReplayClient -- --discover --port 49211
 
 ## 真机使用步骤
 
+**日常玩：双击游戏目录里的 `启动游戏.bat`**（或根目录 `游戏大厅.bat` 菜单选游戏）。bat 会自动：自检管理员环境（缺 urlacl 则提权跑一次 setup-admin-once.bat）→ 杀残留 TeknoParrotUi → 起桥接器（`--game <id>` 自动模式：写 teknoparrot.ini、起协议服务、开注入、窗口出现后自动无边框铺满+白边叠加）→ TeknoParrotUi `--profile=` 直启游戏。游戏退出 10 秒后桥接器自动退出，全程无需开控制面板。
+
+手动/排障模式（等价于旧流程）：
+
 1. **urlacl（一次性）**：Windows 上 HttpListener 绑定 `+` 需要管理员或预先执行（App 绑定失败时会在主窗口显示该命令）：
    ```
    netsh http add urlacl url=http://+:8000/ user=<当前用户名>
@@ -45,6 +49,8 @@ dotnet run --project src/TvgunBridge.ReplayClient -- --discover --port 49211
 3. **校准**：进入游戏画面后点"校准向导"，按提示对两个靶点各开一枪完成两点仿射校准（结果存 `%APPDATA%/TvgunBridge/calibration.json`）。
 4. **开玩**：确认注入开关打开；热键 F5 投币 / F6 开始 / F7 注入开关 / F8 显隐窗口（可在 `%APPDATA%/TvgunBridge/hotkeys.json` 改键）。
 5. **自检**：无游戏时可开"自检"窗口打弹跳靶验证 aim/shot 链路。
+
+注意：一键启动要求桌面会话**未锁定**——锁屏下游戏图形初始化失败会自行退出、注入也无法到达游戏（e2e-realgame.sh 步骤 0 会拦截该环境）。
 
 ## 一键启动（CLI 自动模式）
 
@@ -69,6 +75,15 @@ rem 再拉 TeknoParrot（profile 名取自适配器 JSON 的 teknoParrotProfile 
 ```
 
 桥接器会先等游戏窗口出现再接管，bat 中两条命令的先后顺序不敏感（先启桥接器更稳）。
+
+闭环验收脚本（需本机 Git Bash + 已构建 Release）：
+
+```bash
+bash tools/e2e-realgame.sh --run run1    # 真实游戏（GSEVO）全链路；锁屏环境会被步骤 0 拦截
+bash tools/e2e-fakewindow.sh --run fake1 # 假窗口兜底（锁屏/CI 可用）：WinForms 冒充游戏窗口验证全链路
+```
+
+两脚本全自动（清理→起桥接器→起窗口→ReplayClient 推送→/exit→自动退出断言），失败自动 dump bridge.log，截图与日志落在 `out/e2e/<run>/`（不入库）。
 
 ## 游戏适配
 

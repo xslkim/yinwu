@@ -24,6 +24,7 @@
 !/tvgun-bridge/**
 /tvgun-bridge/**/bin/
 /tvgun-bridge/**/obj/
+/tvgun-bridge/out/
 
 # 放行：tvgun-tv 源码（排除构建产物）
 !/tvgun-tv/
