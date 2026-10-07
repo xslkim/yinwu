@@ -110,3 +110,12 @@
 - ~~Big Buck Hunter Pro 的 teknoParrotIniPath 目录拼写核对（"Big Bug Hunter Pro" 存疑）。~~ 已核实非拼写错误，Home/Pro 两款均已适配。
 - ReplayClient 与真机同打一局对照 aim 流与 shot 时序。
 - TeknoParrot 启动顺序：先启桥接器 App 选游戏 → 再经 TeknoParrot 启动游戏（写 ini 已自动化，首次核对备份 .bak）。
+
+## 2026-10-08 发布工程：27 款游戏一键启动 bat 生成器
+
+- 新增 `tools/make-launchers.sh`（Git Bash）：遍历 `src/TvgunBridge.Core/games/*.json`（venv python 提取 id/displayName/teknoParrotProfile/gameDirectory，TSV 经 `tr -d '\r'` 清洗——Windows python 文本模式 stdout 会把 \n 译成 \r\n），为每款游戏在其 gameDirectory 生成 `启动游戏.bat`，并在仓库根生成 `游戏大厅.bat` 菜单。幂等（覆盖写）。`--dry-run --out <dir>` 输出到临时目录供测试。
+- bat 模板：**纯 ASCII + CRLF**（cmd.exe 不认 UTF-8 注释/LF 的前车之鉴）。逻辑：桥接器 exe 存在性检查（缺失则 echo+pause+exit /b 1）→ urlacl 检查（缺失则 powershell 提权跑 setup-admin-once.bat）→ taskkill 残留 TeknoParrotUi（单实例互斥锁）→ `start TvgunBridge.App.exe --game <id>` → sleep 3 → `cd /d D:\yinwu\1846` 后 `TeknoParrotUi.exe --profile=<xml>`。
+- `游戏大厅.bat` 编码方案选择：**纯 ASCII**（而非 chcp 65001 + BOM）。菜单名用英文 displayName；调用子 bat 时不内嵌中文文件名，改用 `for %%F in ("<gameDirectory>\*.bat") do call` 通配——已核实 27 个 gameDirectory 内仅有生成的启动器一个 bat。完全免疫控制台代码页（本机 936/GBK）。
+- 新增 `tools/test-launchers.sh`：dry-run 后断言 28 个 bat（27 游戏 + 大厅）、每个含正确 `--game <id>` 与 `--profile=<xml>`、纯 CRLF（CR 字节数 == LF 行数）、纯 ASCII。注意本机 grep 的 -P 完全不可用（任何 locale 下 exit 2），字节级断言改用 tr/wc 实现。**PASS**。
+- 落盘验证：27 个 `启动游戏.bat` 逐一 python 断言（存在/CRLF/ASCII/id/profile 四元组），`file` 抽查为 "DOS batch file, ASCII text, with CRLF"。未执行 bat（UAC/起游戏属集成验证，留给下一棒）。
+- .gitignore 增加 `!/游戏大厅.bat` 白名单；游戏目录内 bat 依既有 `/*` 规则不入库。
