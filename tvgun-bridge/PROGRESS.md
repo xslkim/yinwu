@@ -83,8 +83,16 @@
   - 27 款 games/*.json 全部填充两字段：teknoParrotProfile 逐一对应 `1846/UserProfiles/*.xml` 实际文件名（个别与 notes 写法不同以文件为准，如 after-dark→AfterDark.xml、gashaaaan-refill→Gashaaaan2.xml、primeval-hunt→Primevil.xml、vampire-night→vnight.xml）；gameDirectory 取 teknoParrotIniPath 的目录部分。27 款的 profile 在 UserProfiles 与 GameProfiles **双侧均存在**（无需留 null，skip 名单为空）。
   - 测试：新增 ShotHttpServerTests.ExitPost 回环（200+事件+响应体）、E2E ExitPost 走 BridgeServer façade、ConfigTests 扩展每款断言两字段非空 + GameDirectoryMatchesIniPathParent（纯字符串，CI 可移植）+ TeknoParrotProfileExistsInUserOrGameProfiles（D:\yinwu 不存在则跳过的可移植模式）。**build 0 警告 0 错误，dotnet test 196/196 通过，连跑 2 次稳定**（139 + 27×2 字段断言用例 + /exit×2 + 向后兼容×1）。
 
-### 待人工核对（适配参数无法从本地取证确定）
+- 2026-10-08 **App 层一键启动模式（CLI 自动模式）完成**：
+  - 新增 CLI：`TvgunBridge.App.exe --game <adapterId> [--show-ui] [--no-inject] [--exit-after-game]`；无参数保持原 GUI 行为不变（回归保证）。参数错误/找不到 games/<id>.json → 控制台用法文本 + 日志 + 退出码 2；端口绑定失败 → 退出码 1。
+  - 新文件（均在 src/TvgunBridge.App/，零第三方依赖）：`CliOptions`（纯逻辑 TryParse，支持 --game id 与 --game=id 两种写法）、`BridgeLog`（%APPDATA%/TvgunBridge/bridge.log 追加写，时间戳 + 机器可读事件行，GUI/自动两模式统一，日志失败静默不崩）、`AutostartController`（稀薄 UI 状态机：输入=tracker Found/Lost 事件 + Tick()，输出=注入的 ApplyBorderless/RequestShutdown 委托，时钟可注入便于以后单测；Found 过之后连续 Lost ≥10s 才请求退出，从未 Found 永不自动退出）、`SetupCheck`（netsh 只读自检 urlacl `http://+:<port>/` 与三条 tvgun-bridge 防火墙规则，缺失输出 SETUP_MISSING 日志行，不提权）、`ConsoleOutput`（AttachConsole(-1) 挂父控制台打印错误/用法）。
+  - `BridgeRuntime` 增量：接 `ExitReceived` → `InjectExit()`（KeyTap(ESC)，受注入总开关门控，注入时记 EXIT_KEY_SENT）；`StartBridge` 成功记 SERVER_LISTENING port=...、绑定失败记 SERVER_BIND_FAILED；`WriteGameIni` 记 INI_WRITTEN / INI_SKIPPED（reason=no_ini_values/directory_missing/write_failed），并支持 TeknoParrotIniPath 为空时回退 GameDirectory\teknoparrot.ini；InjectionEnabled 置真记 INJECTION_ENABLED；窗口事件记 WINDOW_FOUND title="..." hwnd=0x... / GAME_LOST / BORDERLESS_APPLIED / OVERLAY_SHOWN；新增 UI 线程事件 `WindowFound`/`WindowLost` 供控制器订阅；新增 `ApplyBorderlessFullScreen(hwnd)`（铺满主屏全屏，区别于手动切换的显示器工作区）。
+  - `App.xaml.cs` 重写编排：解析 CLI → 自动模式下 ShutdownMode=OnExplicitShutdown（默认不创建主面板，不进 Alt-Tab，只有叠加边框窗；--show-ui 时照旧显示面板）、自动 SelectGame 写 ini、注入默认开（--no-inject 关）、1s DispatcherTimer 驱动控制器 Tick；退出原因统一经 `_shutdownReason` 记 SHUTDOWN reason=user_exit/game_exited/cli_error/game_not_found/server_bind_failed；OnExit 仍 UndoAll + 停服务 + 释放热键（优雅退出）。GUI 路径行为与旧版一致（仅多了统一日志与热键注册对无主窗的容忍）。
+  - 冒烟验证（本机，Debug 输出）：`--bogus` 与 `--game` 缺值 → 用法文本 + 退出码 2；`--game no-such-game` → GAME_NOT_FOUND + 退出码 2；`--game ghost-squad-evolution` 实跑 6s：日志依次出现 STARTUP mode=auto / INJECTION_ENABLED / INI_WRITTEN（真实写入 vsg_l\teknoparrot.ini 并生成 .bak，内容已核对 Windowed=1/HideCursor=1/Input API=RawInput）/ SERVER_LISTENING port=8000（本机 urlacl+防火墙自检通过，无 SETUP_MISSING）。
+  - **全解决方案 `dotnet build --no-incremental` 0 警告 0 错误（Debug + Release 双配置）；`dotnet test` 196/196 通过，未动 Core/ReplayClient/tests，未加新测试。**
+  - 对接 launcher bat：exe 用 **Release** 输出 `src/TvgunBridge.App/bin/Release/net9.0-windows/TvgunBridge.App.exe`（games/*.json 已随输出复制）；bat 负责先拉 TeknoParrot（`--profile=` 用适配器的 teknoParrotProfile）、再启桥接器（或先桥接器后游戏均可——桥接器会一直等窗口出现）；提权/一次性环境配置由 setup-admin-once.bat 负责，桥接器只自检记日志。
 
+### 待人工核对（适配参数无法从本地取证确定）
 - akuma：HookedWindows.txt 无对应窗口标题条目，windowTitleRegex 暂按目录名 `(?i)akuma` 推测，需实机确认。
 - big-buck-hunter-pro-home：HookedWindows.txt 仅有 Pro 版条目，Home 版窗口标题暂用 "Big Buck Hunter Pro"（可能与 Pro 版相同），需实机确认。
 - vampire-night：Play! 模拟器输入链路（非 TeknoParrot RawInput 直注），换弹/开枪链路需真机验证；processNames 中 "Play" 为推测的模拟器进程名。

@@ -93,6 +93,15 @@ public sealed class BridgeRuntime : IDisposable
     public event EventHandler<ShotEvent>? ShotFeed;
 
     /// <summary>
+    /// Raised on the UI thread after the tracker (re-)locates the game window (and
+    /// after the overlay has been updated). The autostart controller subscribes here.
+    /// </summary>
+    public event EventHandler<GameWindowInfo>? WindowFound;
+
+    /// <summary>Raised on the UI thread when the tracked game window disappears.</summary>
+    public event EventHandler? WindowLost;
+
+    /// <summary>
     /// Master injection switch. Default off so nothing is injected before the user
     /// opts in; applies to pointer moves, clicks, and injected coin/start/reload keys.
     /// </summary>
@@ -105,6 +114,11 @@ public sealed class BridgeRuntime : IDisposable
             if (_pipeline is not null)
             {
                 _pipeline.Enabled = value;
+            }
+
+            if (value)
+            {
+                BridgeLog.Event("INJECTION_ENABLED");
             }
         }
     }
@@ -129,6 +143,7 @@ public sealed class BridgeRuntime : IDisposable
             _server.ShotServer.CoinReceived += OnCoinReceived;
             _server.ShotServer.StartReceived += OnStartReceived;
             _server.ShotServer.ReloadReceived += OnReloadReceived;
+            _server.ShotServer.ExitReceived += OnExitReceived;
             _server.Start();
         }
         catch (HttpListenerException ex)
@@ -137,12 +152,14 @@ public sealed class BridgeRuntime : IDisposable
                 $"HTTP 端口 {Config.Port} 绑定失败：{ex.Message}\n" +
                 "解决办法（管理员 CMD 执行一次，或改用 config.json 的 httpHost=127.0.0.1）：\n" +
                 $"netsh http add urlacl url=http://+:{Config.Port}/ user=%USERDOMAIN%\\%USERNAME%";
+            BridgeLog.Event($"SERVER_BIND_FAILED error=\"{ex.Message}\"");
             CleanupServer();
             return false;
         }
         catch (SocketException ex)
         {
             LastError = $"UDP 端口 {Config.Port} 绑定失败：{ex.Message}（端口被占用？）";
+            BridgeLog.Event($"SERVER_BIND_FAILED error=\"{ex.Message}\"");
             CleanupServer();
             return false;
         }
@@ -158,6 +175,7 @@ public sealed class BridgeRuntime : IDisposable
         _tracker?.Start();
 
         IsBridging = true;
+        BridgeLog.Event($"SERVER_LISTENING port={Config.Port}");
         return true;
     }
 
@@ -282,6 +300,23 @@ public sealed class BridgeRuntime : IDisposable
         }
     }
 
+    /// <summary>
+    /// Injects ESC for the phone's "exit game" button (POST /exit). Gated by
+    /// <see cref="InjectionEnabled"/> like every other injected input.
+    /// </summary>
+    public void InjectExit()
+    {
+        if (!InjectionEnabled)
+        {
+            LastAction = "退出被忽略（注入未启用）";
+            return;
+        }
+
+        Injector.KeyTap(VirtualKey.Escape);
+        BridgeLog.Event("EXIT_KEY_SENT");
+        LastAction = "退出 → 按键 ESC";
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
@@ -321,6 +356,8 @@ public sealed class BridgeRuntime : IDisposable
     private void OnCoinReceived(object? sender, EventArgs e) => _dispatcher.Invoke(InjectCoin);
 
     private void OnStartReceived(object? sender, EventArgs e) => _dispatcher.Invoke(InjectStart);
+
+    private void OnExitReceived(object? sender, EventArgs e) => _dispatcher.Invoke(InjectExit);
 
     private void OnReloadReceived(object? sender, EventArgs e)
     {
@@ -402,19 +439,30 @@ public sealed class BridgeRuntime : IDisposable
 
     private void OnWindowFound(object? sender, GameWindowInfo info) => _dispatcher.Invoke(() =>
     {
+        BridgeLog.Event($"WINDOW_FOUND title=\"{info.Title}\" hwnd=0x{info.Hwnd.ToInt64():X}");
         if (BorderlessArmed)
         {
             ForceBorderless(info.Hwnd);
         }
 
-        Overlay?.FollowRect(info.ClientRect);
+        WindowFound?.Invoke(this, info);
+
+        if (Overlay is { } overlay)
+        {
+            overlay.FollowRect(info.ClientRect);
+            BridgeLog.Event("OVERLAY_SHOWN");
+        }
     });
 
     private void OnWindowBoundsChanged(object? sender, GameWindowInfo info) =>
         _dispatcher.Invoke(() => Overlay?.FollowRect(info.ClientRect));
 
-    private void OnWindowLost(object? sender, EventArgs e) =>
-        _dispatcher.Invoke(() => Overlay?.HideFrame());
+    private void OnWindowLost(object? sender, EventArgs e) => _dispatcher.Invoke(() =>
+    {
+        Overlay?.HideFrame();
+        BridgeLog.Event("GAME_LOST");
+        WindowLost?.Invoke(this, EventArgs.Empty);
+    });
 
     private void ForceBorderless(IntPtr hwnd)
     {
@@ -423,23 +471,49 @@ public sealed class BridgeRuntime : IDisposable
         if (monitor != IntPtr.Zero && NativeMethods.GetMonitorInfo(monitor, ref info))
         {
             var work = info.RcWork;
-            Forcer.Apply(hwnd, new RectD(work.Left, work.Top, work.Right - work.Left, work.Bottom - work.Top));
+            ApplyBorderlessRect(hwnd, new RectD(work.Left, work.Top, work.Right - work.Left, work.Bottom - work.Top));
         }
+    }
+
+    /// <summary>
+    /// Strips the caption and stretches the window over the whole primary screen
+    /// (autostart mode; the manual toggle uses the monitor work area instead).
+    /// </summary>
+    public void ApplyBorderlessFullScreen(IntPtr hwnd) =>
+        ApplyBorderlessRect(
+            hwnd,
+            new RectD(
+                0,
+                0,
+                NativeMethods.GetSystemMetrics(NativeMethods.SmCxScreen),
+                NativeMethods.GetSystemMetrics(NativeMethods.SmCyScreen)));
+
+    private void ApplyBorderlessRect(IntPtr hwnd, RectD rect)
+    {
+        Forcer.Apply(hwnd, rect);
+        BridgeLog.Event($"BORDERLESS_APPLIED hwnd=0x{hwnd.ToInt64():X}");
     }
 
     private void WriteGameIni(GameAdapter adapter)
     {
-        if (string.IsNullOrWhiteSpace(adapter.TeknoParrotIniPath) || adapter.TeknoParrotIniValues.Count == 0)
+        var path = adapter.TeknoParrotIniPath;
+        if (string.IsNullOrWhiteSpace(path) && !string.IsNullOrWhiteSpace(adapter.GameDirectory))
+        {
+            path = Path.Combine(adapter.GameDirectory, "teknoparrot.ini");
+        }
+
+        if (string.IsNullOrWhiteSpace(path) || adapter.TeknoParrotIniValues.Count == 0)
         {
             IniWriteResult = "该适配器未配置 teknoparrot.ini，跳过写入。";
+            BridgeLog.Event("INI_SKIPPED reason=no_ini_values");
             return;
         }
 
-        var path = adapter.TeknoParrotIniPath;
         var directory = Path.GetDirectoryName(path);
         if (!File.Exists(path) && (directory is null || !Directory.Exists(directory)))
         {
             IniWriteResult = $"跳过 ini 写入（游戏目录不存在）：{path}";
+            BridgeLog.Event($"INI_SKIPPED reason=directory_missing path=\"{path}\"");
             return;
         }
 
@@ -451,10 +525,12 @@ public sealed class BridgeRuntime : IDisposable
                 StringComparer.OrdinalIgnoreCase);
             TeknoParrotIniWriter.WriteValues(path, values);
             IniWriteResult = $"已写入 {path}（原文件备份为 .bak）";
+            BridgeLog.Event($"INI_WRITTEN path=\"{path}\"");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             IniWriteResult = $"ini 写入失败：{ex.Message}";
+            BridgeLog.Event($"INI_SKIPPED reason=write_failed path=\"{path}\"");
         }
     }
 
@@ -469,6 +545,7 @@ public sealed class BridgeRuntime : IDisposable
         _server.ShotServer.CoinReceived -= OnCoinReceived;
         _server.ShotServer.StartReceived -= OnStartReceived;
         _server.ShotServer.ReloadReceived -= OnReloadReceived;
+        _server.ShotServer.ExitReceived -= OnExitReceived;
         Wait(_server.StopAsync());
         _server.Dispose();
         _server = null;
