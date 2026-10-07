@@ -40,6 +40,11 @@
 /container/*
 !/container/PROGRESS.md
 !/container/BUILD.md
+!/container/EMULATOR.md
+!/container/FORK.md
+!/container/emu-console.ps1
+!/container/e2e-emulator.sh
+!/container/emulator-boot.png
 
 # 放行忽略规则本身
 !.gitignore
