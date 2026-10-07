@@ -75,6 +75,13 @@ public sealed class BridgeServer : IDisposable
         remove => ShotServer.ReloadReceived -= value;
     }
 
+    /// <summary>Raised for <c>POST /exit</c>.</summary>
+    public event EventHandler? ExitReceived
+    {
+        add => ShotServer.ExitReceived += value;
+        remove => ShotServer.ExitReceived -= value;
+    }
+
     /// <summary>Binds all three services.</summary>
     public void Start()
     {

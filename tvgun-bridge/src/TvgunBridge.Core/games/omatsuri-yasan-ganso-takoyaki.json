@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Omatsuri Yasan - Ganso Takoyaki\\Omatsuri Yasan - Ganso Takoyaki\\teknoparrot.ini",
+  "teknoParrotProfile": "OmatsuriYasanGansoTakoyaki.xml",
+  "gameDirectory": "D:\\yinwu\\Omatsuri Yasan - Ganso Takoyaki\\Omatsuri Yasan - Ganso Takoyaki",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

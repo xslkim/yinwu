@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "rightClick",
   "teknoParrotIniPath": "D:\\yinwu\\Big Buck Hunter Pro Home\\Big Buck Hunter Pro Home\\teknoparrot.ini",
+  "teknoParrotProfile": "BBHHome.xml",
+  "gameDirectory": "D:\\yinwu\\Big Buck Hunter Pro Home\\Big Buck Hunter Pro Home",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

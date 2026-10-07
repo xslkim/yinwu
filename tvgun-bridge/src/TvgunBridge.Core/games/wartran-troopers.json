@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Wartran Troopers\\Wartran Troopers\\D00\\D00\\game\\teknoparrot.ini",
+  "teknoParrotProfile": "WartranTroopers.xml",
+  "gameDirectory": "D:\\yinwu\\Wartran Troopers\\Wartran Troopers\\D00\\D00\\game",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

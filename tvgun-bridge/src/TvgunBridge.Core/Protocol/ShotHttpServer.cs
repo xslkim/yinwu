@@ -9,7 +9,7 @@ namespace TvgunBridge.Core.Protocol;
 /// <c>POST /shot</c> with a JSON body <c>{"x":123.4,"y":567.8}</c> on every trigger
 /// press (press only, no release) and expects <c>{"hit":true,"score":0}</c> back for
 /// its haptic feedback. Extension endpoints (<c>/coin</c>, <c>/start</c>,
-/// <c>/reload</c>, <c>GET /health</c>) are not called by the tvgun phone app; they
+/// <c>/reload</c>, <c>/exit</c>, <c>GET /health</c>) are not called by the tvgun phone app; they
 /// exist for future phone-UI / web remotes and are protocol-compatible additions.
 /// </summary>
 /// <remarks>
@@ -54,6 +54,9 @@ public sealed class ShotHttpServer : IDisposable
 
     /// <summary>Raised for <c>POST /reload</c> (extension endpoint).</summary>
     public event EventHandler? ReloadReceived;
+
+    /// <summary>Raised for <c>POST /exit</c> (extension endpoint; the phone's "exit game" button).</summary>
+    public event EventHandler? ExitReceived;
 
     /// <summary>Starts accepting requests.</summary>
     public void Start()
@@ -163,6 +166,10 @@ public sealed class ShotHttpServer : IDisposable
                     return;
                 case "/reload":
                     ReloadReceived?.Invoke(this, EventArgs.Empty);
+                    await WriteJsonAsync(context, HttpStatusCode.OK, OkResponseBytes).ConfigureAwait(false);
+                    return;
+                case "/exit":
+                    ExitReceived?.Invoke(this, EventArgs.Empty);
                     await WriteJsonAsync(context, HttpStatusCode.OK, OkResponseBytes).ConfigureAwait(false);
                     return;
                 default:

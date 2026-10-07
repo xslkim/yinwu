@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Cooper's 9\\Cooper's 9\\teknoparrot.ini",
+  "teknoParrotProfile": "Coopers9.xml",
+  "gameDirectory": "D:\\yinwu\\Cooper's 9\\Cooper's 9",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

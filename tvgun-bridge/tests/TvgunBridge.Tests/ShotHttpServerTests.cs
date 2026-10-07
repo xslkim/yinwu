@@ -109,6 +109,22 @@ public class ShotHttpServerTests
     }
 
     [Fact]
+    public async Task ExitPostRaisesEventAndReturnsOk()
+    {
+        var (server, client, _) = await StartAsync();
+        using var s = server;
+        using var c = client;
+        var exit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        server.ExitReceived += (_, _) => exit.TrySetResult();
+
+        var response = await client.PostAsync("/exit", new StringContent(""));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("""{"ok":true}""", await response.Content.ReadAsStringAsync());
+        await exit.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task HealthReportsAimAge()
     {
         var now = DateTimeOffset.UtcNow;

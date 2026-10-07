@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Omatsuri Yasan - Kingyo Sukui\\Omatsuri Yasan - Kingyo Sukui\\teknoparrot.ini",
+  "teknoParrotProfile": "OmatsuriYasanKingyoSukui.xml",
+  "gameDirectory": "D:\\yinwu\\Omatsuri Yasan - Kingyo Sukui\\Omatsuri Yasan - Kingyo Sukui",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

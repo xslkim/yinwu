@@ -58,6 +58,19 @@ public sealed class GameAdapter
     public string? TeknoParrotIniPath { get; set; }
 
     /// <summary>
+    /// TeknoParrotUi profile file name (including .xml, e.g. GSEVO.xml) for the
+    /// <c>--profile=</c> command line. Matches the file under TeknoParrot's
+    /// UserProfiles/GameProfiles. Null when unknown.
+    /// </summary>
+    public string? TeknoParrotProfile { get; set; }
+
+    /// <summary>
+    /// Absolute path of the game directory (the directory containing teknoparrot.ini,
+    /// i.e. the directory part of <see cref="TeknoParrotIniPath"/>). Null when unknown.
+    /// </summary>
+    public string? GameDirectory { get; set; }
+
+    /// <summary>
     /// INI values to enforce before launch: section → key → value. The bridge writes
     /// <c>[General] Windowed=1, HideCursor=1, Input API=RawInput</c> for managed games.
     /// </summary>

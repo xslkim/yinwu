@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Primeval Hunt\\Primeval Hunt\\disk0\\prog\\teknoparrot.ini",
+  "teknoParrotProfile": "Primevil.xml",
+  "gameDirectory": "D:\\yinwu\\Primeval Hunt\\Primeval Hunt\\disk0\\prog",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

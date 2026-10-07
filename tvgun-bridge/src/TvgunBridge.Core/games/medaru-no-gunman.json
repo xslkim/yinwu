@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Medaru No Gunman\\Medaru No Gunman\\exe\\teknoparrot.ini",
+  "teknoParrotProfile": "MedaruNoGunman.xml",
+  "gameDirectory": "D:\\yinwu\\Medaru No Gunman\\Medaru No Gunman\\exe",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

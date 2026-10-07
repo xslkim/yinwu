@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\ByonByon\\ByonByon\\bin\\teknoparrot.ini",
+  "teknoParrotProfile": "ByonByon.xml",
+  "gameDirectory": "D:\\yinwu\\ByonByon\\ByonByon\\bin",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

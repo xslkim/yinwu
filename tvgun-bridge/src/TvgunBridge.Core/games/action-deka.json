@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Action Deka\\Action Deka\\GDK\\teknoparrot.ini",
+  "teknoParrotProfile": "ActionDeka.xml",
+  "gameDirectory": "D:\\yinwu\\Action Deka\\Action Deka\\GDK",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

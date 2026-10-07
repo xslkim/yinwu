@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "rightClick",
   "teknoParrotIniPath": "D:\\yinwu\\Big Bug Hunter Pro\\Big Bug Hunter Pro\\teknoparrot.ini",
+  "teknoParrotProfile": "BBHPro.xml",
+  "gameDirectory": "D:\\yinwu\\Big Bug Hunter Pro\\Big Bug Hunter Pro",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

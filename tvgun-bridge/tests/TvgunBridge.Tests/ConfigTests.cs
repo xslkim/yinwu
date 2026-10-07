@@ -131,6 +131,8 @@ public class GameAdapterTests
         Assert.False(string.IsNullOrWhiteSpace(adapter.WindowTitleRegex));
         Assert.NotEmpty(adapter.ProcessNames);
         Assert.False(string.IsNullOrWhiteSpace(adapter.TeknoParrotIniPath));
+        Assert.False(string.IsNullOrWhiteSpace(adapter.TeknoParrotProfile));
+        Assert.False(string.IsNullOrWhiteSpace(adapter.GameDirectory));
         Assert.True(adapter.TeknoParrotIniValues.ContainsKey("General"));
 
         var general = adapter.TeknoParrotIniValues["General"];
@@ -158,6 +160,53 @@ public class GameAdapterTests
         var parent = Path.GetDirectoryName(adapter.TeknoParrotIniPath);
         Assert.True(parent is not null && Directory.Exists(parent),
             $"{adapter.Id}: ini parent directory missing: {parent}");
+    }
+
+    /// <summary>
+    /// gameDirectory must be the directory part of teknoParrotIniPath
+    /// (Path.GetDirectoryName semantics). Portable: pure string check.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GameFiles))]
+    public void GameDirectoryMatchesIniPathParent(string fileName)
+    {
+        var adapter = GameAdapter.Load(Path.Combine(GamesDir, fileName));
+        Assert.Equal(Path.GetDirectoryName(adapter.TeknoParrotIniPath), adapter.GameDirectory);
+    }
+
+    /// <summary>
+    /// teknoParrotProfile must exist under TeknoParrot's UserProfiles or GameProfiles.
+    /// Only meaningful on the development machine (D:\yinwu); elsewhere returns early.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GameFiles))]
+    public void TeknoParrotProfileExistsInUserOrGameProfiles(string fileName)
+    {
+        if (!Directory.Exists(@"D:\yinwu"))
+        {
+            return; // skip: game library not present on this machine
+        }
+
+        var adapter = GameAdapter.Load(Path.Combine(GamesDir, fileName));
+        Assert.False(string.IsNullOrWhiteSpace(adapter.TeknoParrotProfile));
+
+        var inUserProfiles = File.Exists(Path.Combine(@"D:\yinwu\1846\UserProfiles", adapter.TeknoParrotProfile!));
+        var inGameProfiles = File.Exists(Path.Combine(@"D:\yinwu\1846\GameProfiles", adapter.TeknoParrotProfile!));
+        Assert.True(inUserProfiles || inGameProfiles,
+            $"{adapter.Id}: profile {adapter.TeknoParrotProfile} found in neither UserProfiles nor GameProfiles");
+    }
+
+    [Fact]
+    public void MissingProfileAndDirectoryFieldsDeserializeAsNull()
+    {
+        var adapter = GameAdapter.FromJson("""
+        {
+          "id": "t",
+          "displayName": "T"
+        }
+        """);
+        Assert.Null(adapter.TeknoParrotProfile);
+        Assert.Null(adapter.GameDirectory);
     }
 
     [Fact]

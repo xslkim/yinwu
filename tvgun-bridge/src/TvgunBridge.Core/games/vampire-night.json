@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Vampire Night\\Vampire Night\\teknoparrot.ini",
+  "teknoParrotProfile": "vnight.xml",
+  "gameDirectory": "D:\\yinwu\\Vampire Night\\Vampire Night",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Go Go Strike\\Go Go Strike\\teknoparrot.ini",
+  "teknoParrotProfile": "GoGoStrike.xml",
+  "gameDirectory": "D:\\yinwu\\Go Go Strike\\Go Go Strike",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

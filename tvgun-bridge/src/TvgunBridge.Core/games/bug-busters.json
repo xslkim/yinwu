@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Bug Busters\\Bug Busters\\teknoparrot.ini",
+  "teknoParrotProfile": "BugBusters.xml",
+  "gameDirectory": "D:\\yinwu\\Bug Busters\\Bug Busters",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

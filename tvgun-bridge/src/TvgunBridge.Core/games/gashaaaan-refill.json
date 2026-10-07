@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Gashaaaan Refill!\\Gashaaaan Refill!\\IG2\\exec_root\\teknoparrot.ini",
+  "teknoParrotProfile": "Gashaaaan2.xml",
+  "gameDirectory": "D:\\yinwu\\Gashaaaan Refill!\\Gashaaaan Refill!\\IG2\\exec_root",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

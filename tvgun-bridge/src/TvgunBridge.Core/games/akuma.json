@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Akuma\\Akuma\\data\\teknoparrot.ini",
+  "teknoParrotProfile": "Akuma.xml",
+  "gameDirectory": "D:\\yinwu\\Akuma\\Akuma\\data",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

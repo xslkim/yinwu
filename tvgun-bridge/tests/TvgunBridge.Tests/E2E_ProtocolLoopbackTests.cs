@@ -111,6 +111,22 @@ public class E2E_ProtocolLoopbackTests
     }
 
     [Fact]
+    public async Task ExitPostRaisesFacadeEventAndReturnsOk()
+    {
+        using var server = E2EHelpers.StartBridgeServer();
+        var port = server.Port;
+        var exit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        server.ExitReceived += (_, _) => exit.TrySetResult();
+        using var http = new HttpClient();
+
+        var response = await http.PostAsync($"http://127.0.0.1:{port}/exit", new StringContent(""));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("""{"ok":true}""", await response.Content.ReadAsStringAsync());
+        await exit.Task.WaitAsync(E2EHelpers.NetworkTimeout);
+    }
+
+    [Fact]
     public async Task DiscoveryBroadcastIsAnswered()
     {
         using var server = E2EHelpers.StartBridgeServer();

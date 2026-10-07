@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Haunted Museum\\Haunted Museum\\teknoparrot.ini",
+  "teknoParrotProfile": "HauntedMuseum.xml",
+  "gameDirectory": "D:\\yinwu\\Haunted Museum\\Haunted Museum",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

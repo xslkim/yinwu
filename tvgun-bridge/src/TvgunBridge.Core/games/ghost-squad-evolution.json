@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Ghost Squad Evolution\\Ghost Squad Evolution\\vsg_l\\teknoparrot.ini",
+  "teknoParrotProfile": "GSEVO.xml",
+  "gameDirectory": "D:\\yinwu\\Ghost Squad Evolution\\Ghost Squad Evolution\\vsg_l",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

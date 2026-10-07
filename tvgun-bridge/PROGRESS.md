@@ -77,6 +77,12 @@
   - 特殊案例：vampire-night 走 Play! 模拟器（EmulatorType=Play，PS2 基板），窗口标题取自 HookedWindows.txt 的 `Play! - [ VPNGAME/TC3LOAD/TC4LOAD/CBRLOAD ]`，notes 标注"输入链路不同，需真机验证"；after-dark 的 EmulationProfile 复用 WartranTroopers，已在 notes 区分（并区别于 AfterDark2 的 Night Hunter 版）。
   - 测试：ConfigTests 由"5 款"改为遍历全部 games/*.json 断言反序列化 + 必填字段；新增 TeknoParrotIniPathParentDirectoryExists（每款断言 ini 父目录真实存在，D:\yinwu 不存在时直接返回跳过，保证 CI 可移植）。**build 0 警告 0 错误，dotnet test 139/139 通过**（90 + 22 新增反序列化用例 + 27 ini 目录用例）。
 
+- 2026-10-08 **一键启动 Core 增量：POST /exit 端点 + GameAdapter 双字段（teknoParrotProfile / gameDirectory）**：
+  - `ShotHttpServer` 新增 `POST /exit` 扩展端点：触发 `ExitReceived` 事件并回 `{"ok":true}`（语义：手机端"退出游戏"按钮 → ESC 注入，映射逻辑归 App 层）；`BridgeServer` façade 同步暴露 `ExitReceived`。
+  - `GameAdapter` 新增 `teknoParrotProfile`（TeknoParrotUi `--profile=` 用的 profile 文件名，含 .xml）与 `gameDirectory`（teknoparrot.ini 所在目录，即 teknoParrotIniPath 的目录部分）；System.Text.Json 反序列化向后兼容（旧 JSON 缺字段=null，有专门测试）。
+  - 27 款 games/*.json 全部填充两字段：teknoParrotProfile 逐一对应 `1846/UserProfiles/*.xml` 实际文件名（个别与 notes 写法不同以文件为准，如 after-dark→AfterDark.xml、gashaaaan-refill→Gashaaaan2.xml、primeval-hunt→Primevil.xml、vampire-night→vnight.xml）；gameDirectory 取 teknoParrotIniPath 的目录部分。27 款的 profile 在 UserProfiles 与 GameProfiles **双侧均存在**（无需留 null，skip 名单为空）。
+  - 测试：新增 ShotHttpServerTests.ExitPost 回环（200+事件+响应体）、E2E ExitPost 走 BridgeServer façade、ConfigTests 扩展每款断言两字段非空 + GameDirectoryMatchesIniPathParent（纯字符串，CI 可移植）+ TeknoParrotProfileExistsInUserOrGameProfiles（D:\yinwu 不存在则跳过的可移植模式）。**build 0 警告 0 错误，dotnet test 196/196 通过，连跑 2 次稳定**（139 + 27×2 字段断言用例 + /exit×2 + 向后兼容×1）。
+
 ### 待人工核对（适配参数无法从本地取证确定）
 
 - akuma：HookedWindows.txt 无对应窗口标题条目，windowTitleRegex 暂按目录名 `(?i)akuma` 推测，需实机确认。
@@ -88,7 +94,7 @@
 
 ### 自动化已完成（开发机可验证，已全绿）
 
-- Core 协议服务：UDP aim "x,y"（8000）、HTTP POST /shot + /coin /start /reload /health、UDP 发现应答（8001）。
+- Core 协议服务：UDP aim "x,y"（8000）、HTTP POST /shot + /coin /start /reload /exit /health、UDP 发现应答（8001）。
 - 校准映射（两点仿射）、坐标引擎、SendInput 注入管线（125Hz、超时停移、Enabled 总开关）。
 - 游戏窗口发现/跟随、无边框化与 Undo、白边框叠加窗（纯逻辑全测）。
 - 校准向导、自检打鸭子、热键（F5-F8 可配）、ReloadStrategy 双策略、TeknoParrotIniWriter（.bak 备份、测试仅碰临时目录）。

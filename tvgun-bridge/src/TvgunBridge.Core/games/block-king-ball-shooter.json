@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Block King Ball Shooter\\Block King Ball Shooter\\teknoparrot.ini",
+  "teknoParrotProfile": "BlockKing.xml",
+  "gameDirectory": "D:\\yinwu\\Block King Ball Shooter\\Block King Ball Shooter",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

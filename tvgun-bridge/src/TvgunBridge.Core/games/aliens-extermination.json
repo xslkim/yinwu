@@ -8,6 +8,8 @@
   "reloadStrategy": "none",
   "clickHoldMs": 30,
   "teknoParrotIniPath": "D:\\yinwu\\Aliens-Extermination\\Aliens-Extermination\\DATA\\teknoparrot.ini",
+  "teknoParrotProfile": "AliensExtermination.xml",
+  "gameDirectory": "D:\\yinwu\\Aliens-Extermination\\Aliens-Extermination\\DATA",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

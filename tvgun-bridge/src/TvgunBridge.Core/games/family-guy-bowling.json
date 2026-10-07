@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Family Guy Bowling\\Family Guy Bowling\\teknoparrot.ini",
+  "teknoParrotProfile": "FamilyGuyBowling.xml",
+  "gameDirectory": "D:\\yinwu\\Family Guy Bowling\\Family Guy Bowling",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",

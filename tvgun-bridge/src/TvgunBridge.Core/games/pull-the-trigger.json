@@ -7,6 +7,8 @@
   "triggerButton": "left",
   "reloadStrategy": "offscreenShot",
   "teknoParrotIniPath": "D:\\yinwu\\Pull The Trigger\\Pull The Trigger\\teknoparrot.ini",
+  "teknoParrotProfile": "PullTheTrigger.xml",
+  "gameDirectory": "D:\\yinwu\\Pull The Trigger\\Pull The Trigger",
   "teknoParrotIniValues": {
     "General": {
       "Windowed": "1",
