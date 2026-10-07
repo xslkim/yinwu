@@ -1,0 +1,39 @@
+# 默认忽略一切（游戏 ROM、模拟器二进制、大文件不传）
+/*
+
+# 放行：调研文档
+!/docs/
+!/docs/**
+
+# 放行：全局配置
+!/teknoparrot.ini
+
+# 放行：TeknoParrot 的小型文本配置（XML/JSON/MD5/txt）
+!/1846/
+/1846/*
+!/1846/GameProfiles/
+!/1846/Metadata/
+!/1846/UserProfiles/
+!/1846/GameSetup/
+!/1846/MD5/
+!/1846/ParrotData.xml
+!/1846/HookedWindows.txt
+
+# 放行：tvgun-bridge 源码（排除构建产物）
+!/tvgun-bridge/
+!/tvgun-bridge/**
+/tvgun-bridge/**/bin/
+/tvgun-bridge/**/obj/
+
+# 放行：tvgun-tv 源码（排除构建产物）
+!/tvgun-tv/
+!/tvgun-tv/**
+/tvgun-tv/out/
+/tvgun-tv/bin/
+/tvgun-tv/*.apk
+/tvgun-tv/*.apk.idsig
+/tvgun-tv/local.properties
+/tvgun-tv/debug.keystore
+
+# 放行忽略规则本身
+!.gitignore
