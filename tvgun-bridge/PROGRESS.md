@@ -167,3 +167,8 @@
 - **桌面解锁后重跑 `bash tools/e2e-realgame.sh --run run1` 与 `--run run2`**：验证解锁环境下游戏不自行退出、ESC 由游戏真正消费（对照实验已给出锁屏基线：25s 自退）、截图为真实游戏画面。
 - 锁屏根因待查（ScreenSaveActive=1，疑手动 Win+L 或 idle 策略；无管理员权限无法改）。
 - 手机端（D:\tvgun commit cd66285）远程未配置，保持本地。
+
+## 2026-10-08 真实游戏最终签字验收（桌面解锁后）
+
+- `tools/e2e-realgame.sh --run run3` / `--run run4`：**两遍 10/10 PASS**（窗口识别 20-21s、无边框+叠加边框接管、ReplayClient 3 枪全中 p50 1.4ms、/exit→ESC 被游戏消费 game_ate_esc、桥接器自动退出清理）。
+- 真实画面截图：out/e2e/run3/*.png（SEGA 警告页 + 左上角标可见）。锁屏保留项关闭。
