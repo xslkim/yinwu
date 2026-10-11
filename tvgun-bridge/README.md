@@ -13,6 +13,8 @@
 
 目标框架 net9.0-windows，零第三方 NuGet 依赖。
 
+> 部署到另一台机器：见 [../docs/teknoparrot-android/12-新机器部署指南.md](../docs/teknoparrot-android/12-新机器部署指南.md)。
+
 ## 构建与测试
 
 ```bash

@@ -18,12 +18,25 @@
 
 set -euo pipefail
 
-ROOT="D:/yinwu"
+# Install root override: set TVGUN_ROOT when the games/TeknoParrot tree is not at D:/yinwu
+# (e.g. TVGUN_ROOT=E:/games/yinwu ./make-launchers.sh). games/*.json paths must match too.
+ROOT="${TVGUN_ROOT:-D:/yinwu}"
+ROOT_WIN="$(cygpath -w "$ROOT")"
 GAMES_DIR="$ROOT/tvgun-bridge/src/TvgunBridge.Core/games"
-BRIDGE_EXE_WIN='D:\yinwu\tvgun-bridge\src\TvgunBridge.App\bin\Release\net9.0-windows\TvgunBridge.App.exe'
-SETUP_BAT_WIN='D:\yinwu\tvgun-bridge\setup-admin-once.bat'
-TP_DIR_WIN='D:\yinwu\1846'
-PY="D:/tvgun/.venv/Scripts/python.exe"
+BRIDGE_EXE_WIN="$ROOT_WIN\\tvgun-bridge\\src\\TvgunBridge.App\\bin\\Release\\net9.0-windows\\TvgunBridge.App.exe"
+SETUP_BAT_WIN="$ROOT_WIN\\tvgun-bridge\\setup-admin-once.bat"
+TP_DIR_WIN="$ROOT_WIN\\1846"
+# Python: TVGUN_PY override > dev-machine venv > PATH. System python on the dev
+# machine is a Microsoft Store stub, so the venv is preferred there.
+if [ -n "${TVGUN_PY:-}" ]; then
+    PY="$TVGUN_PY"
+elif [ -x "D:/tvgun/.venv/Scripts/python.exe" ]; then
+    PY="D:/tvgun/.venv/Scripts/python.exe"
+elif command -v python3 >/dev/null 2>&1; then
+    PY="python3"
+else
+    PY="python"
+fi
 LAUNCHER_NAME=$'启动游戏.bat'
 HALL_PATH="$ROOT/游戏大厅.bat"
 
@@ -39,8 +52,8 @@ done
 if [ "$DRY_RUN" = "1" ] && [ -z "$OUT_DIR" ]; then
     echo "--dry-run requires --out <dir>" >&2; exit 2
 fi
-if [ ! -x "$PY" ]; then
-    echo "venv python not found: $PY" >&2; exit 2
+if ! command -v "$PY" >/dev/null 2>&1; then
+    echo "python not found: $PY (set TVGUN_PY=/path/to/python)" >&2; exit 2
 fi
 
 # Extract id / displayName / teknoParrotProfile / gameDirectory as TSV (sorted by id).
