@@ -33,7 +33,7 @@ var _dwell_left := 0.0
 func spawn_at(pos: Vector3) -> void:
 	position = pos
 	_origin = pos
-	scale = Vector3.ZERO
+	scale = Vector3.ONE * 0.01  # 从 0 开始的 scale 会触发 det==0 引擎告警，用极小值代替
 	_build()
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3.ONE, POP_TIME) \
