@@ -9,7 +9,7 @@ extends Node
 ##   blip(...)   —— 合成音兼容层
 ##
 ## 事件点对照（详见 MANIFEST）：
-##   shot 开火 / hit 命中 / hit_gold 金靶命中 / hostage 误伤 / reload 换弹 / empty 空仓(常驻合成)
+##   shot 开火 / hit 命中 / hit_gold 金靶命中 / hostage 误伤 / reload 换弹 / empty 空仓
 ##   coin 投币 / start 开始 / pass 过关 / fail 失败 / gameover 总结算 / combo 连击里程碑
 ##   gold_spawn 金靶出现 / escape 逃靶 / ui_click 调试键 / stinger_win / stinger_lose
 
@@ -23,7 +23,7 @@ const CLIP_MAP := {
 	"gameover": "sfx_gameover", "combo": "sfx_combo", "gold_spawn": "sfx_gold_spawn",
 	"escape": "sfx_escape", "ui_click": "sfx_ui_click",
 	"stinger_win": "stinger_win", "stinger_lose": "stinger_lose",
-	"empty": "",
+	"empty": "sfx_empty",
 }
 
 ## 语音播报名 → voice_<name>.wav

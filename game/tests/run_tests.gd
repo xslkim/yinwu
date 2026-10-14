@@ -460,15 +460,14 @@ func _test_settings() -> void:
 
 func _test_asset_integration() -> void:
 	var am := AudioMgr.new()
-	# 每个 play() 名都解析到交付的 WAV（empty 是常驻合成 fallback，例外）
+	# 每个 play() 名都解析到交付的 WAV
 	for clip_name in AudioMgr.CLIP_MAP:
-		if clip_name == "empty":
-			continue
 		_assert(am.resolve_clip(clip_name) != "", "音效 %s 应解析到交付文件" % clip_name)
-	# 变体数：shot/hit 各 3 个，hit_gold 2 个
+	# 变体数：shot/hit 各 3 个，hit_gold/empty 各 2 个
 	_assert(Assets.variants("res://assets/audio", "sfx_shot", ["wav"]).size() == 3, "shot 3 变体")
 	_assert(Assets.variants("res://assets/audio", "sfx_hit", ["wav"]).size() == 3, "hit 3 变体")
 	_assert(Assets.variants("res://assets/audio", "sfx_hit_gold", ["wav"]).size() == 2, "hit_gold 2 变体")
+	_assert(Assets.variants("res://assets/audio", "sfx_empty", ["wav"]).size() == 2, "empty 2 变体")
 	# 语音与 BGM
 	for v in AudioMgr.VOICE_NAMES:
 		_assert(not Assets.variants("res://assets/audio", "voice_" + v, ["wav"]).is_empty(),
