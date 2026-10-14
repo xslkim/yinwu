@@ -1,43 +1,59 @@
 extends Node3D
 
-## ArcGun 主场景：Week 0-1 核心射击循环
-##   程序化低多边形场景（地面/背景板/几何装饰，纯色卡通，零外部素材）
-##   固定视角 + 水平往复标靶 + 命中三件套反馈（顿帧/火光/粒子跳分）
+## ArcGun 主场景：Week 2 垂直切片
+##   程序化低多边形场景（地面/背景板/几何装饰，纯色卡通 + inverted-hull 描边）
+##   微关卡串烧：attract → 标题闪现 → 倒计时开打 → 单关结算 → 总结算页
+##   多靶系统：波次表驱动生成器，普通/人质/金靶三型
 ## 输入纪律：本脚本只通过 InputProvider 接口拿输入，绝不直接摸 Input 单例
 ##   唯一例外：F1/F2/F9/F11 调试热键属于"系统层"，不算游戏逻辑
-## 启动参数：`-- --udp` 则以 UDP 光枪源启动（默认鼠标源）
+## 启动参数：`-- --udp` UDP 光枪源；`--freeze-target` 定量联调（钉死单靶）；
+##   `--auto-shots` 每 60 帧自截屏到 D:/yinwu/temp/arcgun-shots/auto/（锁屏也能验收画面）
 
 @export var hit_tolerance := 60.0  ## 命中宽容度（准星到靶心的屏幕像素距离）
 
 var _camera: Camera3D
-var _target: Target
 var _crosshair: Crosshair
 var _hud: Hud
+var _level_ui: LevelUi
 var _overlay: DebugOverlay
 var _audio: PlaceholderAudio
 var _flash_light: OmniLight3D
 var _particles: GPUParticles3D
+var _spawner: TargetSpawner
 
 var _provider: InputProvider
 var _score := ScoreKeeper.new()
 var _ammo := AmmoManager.new()
+var _levels: LevelManager
 var _show_hit_ring := false
+var _hitstop_active := false  ## 顿帧防重入
+var _freeze_target: Target    ## 定量联调模式下的钉死靶
 var _freeze_report := false
+var _auto_shots := false    ## 自截屏验收模式
+var _shot_frame := 0
 
 
 func _ready() -> void:
 	_build_world()
-	_build_target()
 	_build_effects()
 	_build_ui()
-	# 命令行 `--udp` 以手机光枪源启动，否则默认鼠标源
 	var args := OS.get_cmdline_user_args()
-	var use_udp := "--udp" in args
-	_switch_provider(use_udp)
-	# `--freeze-target`：定量联调用，靶子钉死并打印其屏幕坐标
 	if "--freeze-target" in args:
-		_target.speed = 0.0
+		# 定量联调：不走关卡流程，场上只有一个永不缩回的固定靶
+		_freeze_target = Target.new()
+		_freeze_target.speed = 0.0
+		_freeze_target.dwell = 9999.0
+		add_child(_freeze_target)
+		_freeze_target.spawn_at(Vector3(0, 2.0, -6))
 		_freeze_report = true
+		_level_ui.show_title({"title": "FREEZE TEST", "goal": 0, "duration": 0.0})
+	else:
+		_build_level_flow()
+	# 命令行 `--udp` 以手机光枪源启动，否则默认鼠标源
+	_switch_provider("--udp" in args)
+	_auto_shots = "--auto-shots" in args
+	if _auto_shots:
+		DirAccess.make_dir_recursive_absolute("D:/yinwu/temp/arcgun-shots/auto")
 	_hud.set_score(0)
 	_hud.set_ammo(_ammo.current, _ammo.capacity)
 
@@ -49,22 +65,33 @@ func _exit_tree() -> void:
 		total, _score.hits, _score.accuracy(), _score.score])
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if _freeze_report:
 		_freeze_report = false
-		var p := _camera.unproject_position(_target.bullseye_position())
+		var p := _camera.unproject_position(_freeze_target.bullseye_position())
 		print("[Test] 靶心屏幕坐标=(%.1f,%.1f)" % [p.x, p.y])
-		print("[Test] vp=%s cam_pos=%s cam_rot=%s tgt=%s fov=%s keep=%s" % [
-			get_viewport().get_visible_rect().size, _camera.global_position,
-			_camera.rotation_degrees, _target.bullseye_position(),
-			_camera.fov, _camera.keep_aspect])
+	if _levels:
+		_levels.tick(delta)
+		if _levels.state == "playing":
+			_spawner.tick(delta)
+			_level_ui.update_timer(_levels.time_ratio())
 	_crosshair.aim = _provider.get_aim()
 	_crosshair.fresh = _provider.is_aim_fresh()
 	_crosshair.show_hit_ring = _show_hit_ring
 	if _show_hit_ring:
-		_crosshair.hit_ring_center = _camera.unproject_position(_target.bullseye_position())
-		_crosshair.hit_ring_radius = hit_tolerance
+		var nearest := _nearest_target(_provider.get_aim())
+		if nearest:
+			_crosshair.hit_ring_center = _camera.unproject_position(nearest.bullseye_position())
+			_crosshair.hit_ring_radius = hit_tolerance
+		else:
+			_crosshair.show_hit_ring = false
 	_overlay.update_info(_provider)
+	if _auto_shots:
+		_shot_frame += 1
+		if _shot_frame % 60 == 0:
+			# 自截屏：引擎内读回视口，锁屏/遮挡环境下也能验收画面
+			var img := get_viewport().get_texture().get_image()
+			img.save_png("D:/yinwu/temp/arcgun-shots/auto/shot_%04d.png" % (_shot_frame / 60))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -75,6 +102,40 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_F2: _show_hit_ring = not _show_hit_ring
 			KEY_F9: _switch_provider(_provider is MouseGunProvider)
 			KEY_F11: _toggle_fullscreen()
+
+
+# ---------- 关卡流程接线 ----------
+
+func _build_level_flow() -> void:
+	_spawner = TargetSpawner.new()
+	add_child(_spawner)
+	_levels = LevelManager.new(LevelDefs.all(), _score)
+	# 调试跳关：`--level 2` 直接从中途开打（验收人质/金靶用）
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--level="):
+			_levels.start_at = clampi(int(a.trim_prefix("--level=")) - 1, 0, 2)
+	_levels.level_title_shown.connect(func(_i, def): _level_ui.show_title(def))
+	_levels.level_started.connect(_on_level_started)
+	_levels.level_finished.connect(_on_level_finished)
+	_levels.game_finished.connect(_on_game_finished)
+	_level_ui.show_attract(_levels.credits)
+
+
+func _on_level_started(_idx: int, def: Dictionary) -> void:
+	_level_ui.show_playing(def)
+	_spawner.start_level(def)
+	_ammo.reload()  # 街机惯例：每关开始满弹
+	_hud.set_ammo(_ammo.current, _ammo.capacity)
+
+
+func _on_level_finished(_idx: int, passed: bool, level_score: int) -> void:
+	_spawner.stop()
+	_level_ui.show_level_result(passed, level_score, _levels.current_level().goal)
+	_audio.blip(660.0 if passed else 180.0, 0.2, 0.3)
+
+
+func _on_game_finished(win: bool) -> void:
+	_level_ui.show_gameover(win, _score)
 
 
 # ---------- 输入源管理 ----------
@@ -89,14 +150,36 @@ func _switch_provider(use_udp: bool) -> void:
 	add_child(_provider)
 	_provider.shot.connect(_on_shot)
 	_provider.reloaded.connect(_on_reload)
-	_provider.coin.connect(func(): print("[Main] COIN 事件（投币逻辑 Week 2 接）"))
-	_provider.started.connect(func(): print("[Main] START 事件（关卡流程 Week 2 接）"))
+	_provider.coin.connect(_on_coin)
+	_provider.started.connect(_on_start)
 	print("[Main] 输入源切换为 %s" % _provider.provider_name())
+
+
+func _on_coin() -> void:
+	if _levels == null:
+		return
+	_levels.insert_coin()
+	_audio.blip(990.0, 0.1, 0.3)
+	if _levels.state == "attract":
+		_level_ui.show_attract(_levels.credits)
+
+
+func _on_start() -> void:
+	if _levels == null:
+		return
+	if _levels.press_start():
+		_audio.blip(1320.0, 0.12, 0.3)
+	else:
+		_audio.blip(160.0, 0.09, 0.3)  # 没币/没到时候的低哑提示
 
 
 # ---------- 核心射击循环 ----------
 
 func _on_shot() -> void:
+	# 只在开打状态响应射击（待机/结算页开枪不耗弹不计分）
+	var in_play := _levels == null or _levels.state == "playing"
+	if not in_play:
+		return
 	if not _ammo.consume():
 		_audio.blip(160.0, 0.09, 0.3)  # 空仓低哑声
 		_hud.set_ammo(0, _ammo.capacity)
@@ -106,17 +189,23 @@ func _on_shot() -> void:
 	_flash_muzzle()
 
 	var aim := _provider.get_aim()
-	var bullseye_screen := _camera.unproject_position(_target.bullseye_position())
-	var hit := aim.distance_to(bullseye_screen) <= hit_tolerance
-	if hit:
-		hit = not _is_occluded(aim)  # raycast 验遮挡：中间有东西就不算
-
-	if hit:
-		var gained := _score.register_hit()
-		_hud.set_score(_score.score)
-		_hud.set_combo(_score.combo)
-		_spawn_hit_feedback(aim, gained)
-		_hitstop()
+	var target := _nearest_target(aim)
+	if target and not _is_occluded(aim, target):
+		if target.target_type == Target.Type.HOSTAGE:
+			_score.register_hostage_hit()
+			_hud.set_score(_score.score)
+			_hud.set_combo(0)
+			_spawn_score_label(aim, "-%d" % ScoreKeeper.HOSTAGE_PENALTY, Color(1.0, 0.3, 0.25))
+			_audio.blip(140.0, 0.15, 0.35)  # 误伤低沉闷响
+		else:
+			var gained := _score.register_hit(target.base_points)
+			_hud.set_score(_score.score)
+			_hud.set_combo(_score.combo)
+			_spawn_hit_feedback(aim, target, gained)
+			_hitstop()
+		# 联调钉死靶打不烂（要反复测命中率）；正常靶命中即销毁
+		if target != _freeze_target:
+			target.destroy_with_hit()
 	else:
 		_score.register_miss()
 		_hud.set_combo(0)
@@ -129,27 +218,51 @@ func _on_reload() -> void:
 	_audio.blip(660.0, 0.05, 0.25)
 
 
+## 屏幕上离准星最近且在宽容度内的可打标靶；没有则 null
+func _nearest_target(aim: Vector2) -> Target:
+	var best: Target = null
+	var best_dist := hit_tolerance
+	for t in _all_targets():
+		if not t.is_hittable():
+			continue
+		var d := aim.distance_to(_camera.unproject_position(t.bullseye_position()))
+		if d <= best_dist:
+			best_dist = d
+			best = t
+	return best
+
+
+func _all_targets() -> Array:
+	if _freeze_target:
+		return [_freeze_target]
+	return _spawner.alive_targets() if _spawner else []
+
+
 ## 从准星位置打一条射线：只有"比标靶更近的遮挡物"才算挡住
 ## （宽容度圈大于靶心碰撞球，射线常会擦过球体打中后面的墙，不能算遮挡）
-func _is_occluded(aim: Vector2) -> bool:
+func _is_occluded(aim: Vector2, target: Target) -> bool:
 	var from := _camera.project_ray_origin(aim)
 	var to := from + _camera.project_ray_normal(aim) * 100.0
 	var query := PhysicsRayQueryParameters3D.create(from, to)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if hit.is_empty():
 		return false
-	var target_dist := from.distance_to(_target.bullseye_position())
+	var target_dist := from.distance_to(target.bullseye_position())
 	# 命中点在靶心前方 0.8m 以内才算真遮挡（0.8 ≈ 碰撞球半径 + 余量）
 	return from.distance_to(hit.position) < target_dist - 0.8
 
 
 # ---------- 命中反馈三件套 ----------
 
-## ① 顿帧 60ms（真实时间，不受 time_scale 影响）
+## ① 顿帧 60ms（真实时间，不受 time_scale 影响；连续命中不叠加）
 func _hitstop() -> void:
+	if _hitstop_active:
+		return
+	_hitstop_active = true
 	Engine.time_scale = 0.05
 	await get_tree().create_timer(0.06, true, false, true).timeout
 	Engine.time_scale = 1.0
+	_hitstop_active = false
 
 
 ## ② 枪口火光：动态光源闪一下
@@ -160,18 +273,24 @@ func _flash_muzzle() -> void:
 
 
 ## ③ 命中粒子 + 跳分数字
-func _spawn_hit_feedback(aim: Vector2, gained: int) -> void:
+func _spawn_hit_feedback(aim: Vector2, target: Target, gained: int) -> void:
 	# 粒子打在准星对应的 3D 射线与靶面交点处（近似取靶心深度）
-	var depth := _camera.global_position.distance_to(_target.bullseye_position())
+	var depth := _camera.global_position.distance_to(target.bullseye_position())
 	var pos := _camera.project_ray_origin(aim) + _camera.project_ray_normal(aim) * depth
 	_particles.global_position = pos
 	_particles.restart()
+	_spawn_score_label(aim, "+%d" % gained, Color(1.0, 0.9, 0.2), target)
 
+
+func _spawn_score_label(aim: Vector2, text: String, color: Color, target: Target = null) -> void:
+	var depth := _camera.global_position.distance_to(
+		target.bullseye_position() if target else Vector3(0, 2.0, -6))
+	var pos := _camera.project_ray_origin(aim) + _camera.project_ray_normal(aim) * depth
 	var label := Label3D.new()
-	label.text = "+%d" % gained
+	label.text = text
 	label.font_size = 200
 	label.outline_size = 24
-	label.modulate = Color(1.0, 0.9, 0.2)
+	label.modulate = color
 	label.outline_modulate = Color(0.08, 0.08, 0.12)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.global_position = pos + Vector3(0, 0.3, 0)
@@ -261,12 +380,6 @@ func _build_world() -> void:
 	_add_deco_cylinder(Vector3(6, 1.0, -8.5), Color(0.55, 0.35, 0.75))
 
 
-func _build_target() -> void:
-	_target = Target.new()
-	_target.position = Vector3(0, 2.0, -6)
-	add_child(_target)
-
-
 func _build_effects() -> void:
 	# 枪口光源（平时熄灭，开火瞬间点亮）
 	_flash_light = OmniLight3D.new()
@@ -316,6 +429,8 @@ func _build_ui() -> void:
 	ui.layer = 10
 	ui.add_child(_crosshair)
 	add_child(ui)
+	_level_ui = LevelUi.new()
+	add_child(_level_ui)
 	_overlay = DebugOverlay.new()
 	add_child(_overlay)
 

@@ -22,8 +22,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		shot.emit()
 	elif event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_R:
-			reloaded.emit()
+		match event.keycode:
+			KEY_R: reloaded.emit()
+			KEY_C: coin.emit()        # 模拟投币（手机端 COIN）
+			KEY_ENTER: started.emit() # 模拟开始（手机端 START）
 
 
 func get_aim() -> Vector2:

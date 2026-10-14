@@ -29,6 +29,7 @@ var level_idx := -1
 var time_left := 0.0
 var level_score := 0       ## 本关得分（过关判定的依据）
 var last_passed := false
+var start_at := 0          ## 从第几关开打（0 起；调试跳关用，正常流程为 0）
 
 var _phase_time := 0.0
 var _level_start_score := 0
@@ -44,16 +45,18 @@ func insert_coin() -> void:
 
 
 func can_start() -> bool:
-	return credits > 0 and state in ["attract", "gameover"]
+	# 再来一局（gameover）免投币；待机页（attract）必须先投币
+	return credits > 0 if state == "attract" else state == "gameover"
 
 
 ## 开始/再来一局。成功返回 true；无币或未到时返回 false
 func press_start() -> bool:
 	if not can_start():
 		return false
-	credits -= 1
+	if state == "attract":
+		credits -= 1
 	score_keeper.reset()
-	level_idx = -1
+	level_idx = start_at - 1
 	_advance_to_title()
 	return true
 

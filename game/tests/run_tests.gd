@@ -247,9 +247,8 @@ func _test_level_flow() -> void:
 	_assert(m.state == "gameover", "失败后进总结算")
 	_assert(over[0], "game_finished 信号应发出")
 
-	# 再来一局：同步重置，立刻回标题（断言无延迟 —— 这是 <2s 重开的逻辑保证）
-	m.insert_coin()
-	_assert(m.press_start(), "总结算页可再来一局")
+	# 再来一局：免投币，同步重置，立刻回标题（断言无延迟 —— 这是 <2s 重开的逻辑保证）
+	_assert(m.press_start(), "总结算页可免投币再来一局")
 	_assert(m.state == "title" and m.level_idx == 0 and s.score == 0, "重开归零回第 1 关")
 
 	# 全通关路径：3 关都达标 → win=true

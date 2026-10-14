@@ -9,6 +9,10 @@ var _playback: AudioStreamGeneratorPlayback
 
 
 func _ready() -> void:
+	# headless 下 dummy 音频驱动的 playback 引用永不释放（引擎已知怪癖），
+	# 测试环境直接不建播放器，退出时就不会有 ObjectDB 泄漏警告
+	if DisplayServer.get_name() == "headless":
+		return
 	var gen := AudioStreamGenerator.new()
 	gen.mix_rate = 22050.0
 	gen.buffer_length = 0.1
@@ -20,10 +24,11 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	# 释放 playback / stream 引用，否则退出时报 ObjectDB 泄漏
-	_player.stop()
-	_playback = null
-	_player.stream = null
+	# 释放 playback / stream 引用（非 headless 才建了播放器）
+	if _player:
+		_player.stop()
+		_playback = null
+		_player.stream = null
 
 
 ## 合成一段正弦音（freq Hz，dur 秒，带简单衰减包络防爆音）
