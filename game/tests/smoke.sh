@@ -30,4 +30,10 @@ echo "[smoke] 2/3 单元测试 ..."
 echo "[smoke] 3/3 headless 启动游戏（300 帧后自动退出）..."
 "$GODOT" --headless --path "$GAME" --quit-after 300 || { echo "[smoke] 游戏启动崩溃"; exit 1; }
 
+# 可选：`bash game/tests/smoke.sh --full` 追加 e2e 命中率定量验证（约 20 秒）
+if [ "${1:-}" = "--full" ]; then
+  echo "[smoke] 附加: e2e 命中率 ..."
+  bash "$GAME/tests/e2e_hit.sh" || { echo "[smoke] e2e 命中率不达标"; exit 1; }
+fi
+
 echo "[smoke] 全部通过 ✔"

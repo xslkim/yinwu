@@ -22,6 +22,7 @@ var _provider: InputProvider
 var _score := ScoreKeeper.new()
 var _ammo := AmmoManager.new()
 var _show_hit_ring := false
+var _freeze_report := false
 
 
 func _ready() -> void:
@@ -30,13 +31,33 @@ func _ready() -> void:
 	_build_effects()
 	_build_ui()
 	# 命令行 `--udp` 以手机光枪源启动，否则默认鼠标源
-	var use_udp := "--udp" in OS.get_cmdline_user_args()
+	var args := OS.get_cmdline_user_args()
+	var use_udp := "--udp" in args
 	_switch_provider(use_udp)
+	# `--freeze-target`：定量联调用，靶子钉死并打印其屏幕坐标
+	if "--freeze-target" in args:
+		_target.speed = 0.0
+		_freeze_report = true
 	_hud.set_score(0)
 	_hud.set_ammo(_ammo.current, _ammo.capacity)
 
 
+func _exit_tree() -> void:
+	# 定量联调：退出时打一行统计（headless 跑命中率用）
+	var total := _score.hits + _score.misses
+	print("[Stats] shots=%d hits=%d accuracy=%.2f score=%d" % [
+		total, _score.hits, _score.accuracy(), _score.score])
+
+
 func _process(_delta: float) -> void:
+	if _freeze_report:
+		_freeze_report = false
+		var p := _camera.unproject_position(_target.bullseye_position())
+		print("[Test] 靶心屏幕坐标=(%.1f,%.1f)" % [p.x, p.y])
+		print("[Test] vp=%s cam_pos=%s cam_rot=%s tgt=%s fov=%s keep=%s" % [
+			get_viewport().get_visible_rect().size, _camera.global_position,
+			_camera.rotation_degrees, _target.bullseye_position(),
+			_camera.fov, _camera.keep_aspect])
 	_crosshair.aim = _provider.get_aim()
 	_crosshair.fresh = _provider.is_aim_fresh()
 	_crosshair.show_hit_ring = _show_hit_ring

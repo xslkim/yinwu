@@ -93,6 +93,20 @@ func _test_one_euro() -> void:
 		out = f.filter(float(i) * 10.0, 1.0 / 60.0)
 	_assert(absf(out - 590.0) < 60.0, "匀速追踪滞后应小于 60px（实际滞后 %f）" % absf(out - 590.0))
 
+	# 阶跃响应（出厂参数 min_cutoff=1.0 beta=0.7 的定量依据）：
+	# 100Hz 采样下 500px 阶跃应在 2 帧（20ms）内进入 ±5px —— 光枪"指哪打哪"的底线
+	f = OneEuro.new()
+	var dt := 0.01
+	for i in 50:
+		f.filter(500.0, dt)
+	var converge_frame := -1
+	for i in range(1, 60):
+		out = f.filter(1000.0, dt)
+		if absf(out - 1000.0) < 5.0 and converge_frame < 0:
+			converge_frame = i
+	_assert(converge_frame > 0 and converge_frame <= 2,
+		"阶跃收敛应在 2 帧内（实际 %d 帧）" % converge_frame)
+
 
 func _variance(values: Array) -> float:
 	var mean := 0.0
