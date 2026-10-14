@@ -1,0 +1,46 @@
+class_name Hud
+extends CanvasLayer
+
+## HUD：得分 / 弹药 / 连击，全部代码搭建，无外部素材
+
+var _score_label: Label
+var _ammo_label: Label
+var _combo_label: Label
+
+
+func _ready() -> void:
+	_score_label = _make_label(Vector2(40, 30), 48, HORIZONTAL_ALIGNMENT_LEFT)
+	_ammo_label = _make_label(Vector2(40, -90), 64, HORIZONTAL_ALIGNMENT_LEFT)
+	_ammo_label.anchor_top = 1.0
+	_ammo_label.anchor_bottom = 1.0
+	_combo_label = _make_label(Vector2(-260, 30), 40, HORIZONTAL_ALIGNMENT_RIGHT)
+	_combo_label.anchor_left = 1.0
+	_combo_label.anchor_right = 1.0
+	_combo_label.size.x = 240
+
+
+func set_score(score: int) -> void:
+	_score_label.text = "SCORE %06d" % score
+
+
+func set_ammo(current: int, capacity: int) -> void:
+	# 弹药用圆点图示，比数字更"街机"
+	var pips := ""
+	for i in capacity:
+		pips += "●" if i < current else "○"
+	_ammo_label.text = pips
+	_ammo_label.modulate = Color(1, 0.3, 0.2) if current == 0 else Color.WHITE
+
+
+func set_combo(combo: int) -> void:
+	_combo_label.text = "COMBO ×%d" % combo if combo >= 2 else ""
+
+
+func _make_label(offset: Vector2, font_size: int, align: HorizontalAlignment) -> Label:
+	var label := Label.new()
+	label.position = offset
+	label.size = Vector2(400, font_size + 20)
+	label.horizontal_alignment = align
+	label.add_theme_font_size_override("font_size", font_size)
+	add_child(label)
+	return label

@@ -1,0 +1,315 @@
+extends Node3D
+
+## ArcGun 主场景：Week 0-1 核心射击循环
+##   程序化低多边形场景（地面/背景板/几何装饰，纯色卡通，零外部素材）
+##   固定视角 + 水平往复标靶 + 命中三件套反馈（顿帧/火光/粒子跳分）
+## 输入纪律：本脚本只通过 InputProvider 接口拿输入，绝不直接摸 Input 单例
+##   唯一例外：F1/F2/F9/F11 调试热键属于"系统层"，不算游戏逻辑
+## 启动参数：`-- --udp` 则以 UDP 光枪源启动（默认鼠标源）
+
+@export var hit_tolerance := 60.0  ## 命中宽容度（准星到靶心的屏幕像素距离）
+
+var _camera: Camera3D
+var _target: Target
+var _crosshair: Crosshair
+var _hud: Hud
+var _overlay: DebugOverlay
+var _audio: PlaceholderAudio
+var _flash_light: OmniLight3D
+var _particles: GPUParticles3D
+
+var _provider: InputProvider
+var _score := ScoreKeeper.new()
+var _ammo := AmmoManager.new()
+var _show_hit_ring := false
+
+
+func _ready() -> void:
+	_build_world()
+	_build_target()
+	_build_effects()
+	_build_ui()
+	# 命令行 `--udp` 以手机光枪源启动，否则默认鼠标源
+	var use_udp := "--udp" in OS.get_cmdline_user_args()
+	_switch_provider(use_udp)
+	_hud.set_score(0)
+	_hud.set_ammo(_ammo.current, _ammo.capacity)
+
+
+func _process(_delta: float) -> void:
+	_crosshair.aim = _provider.get_aim()
+	_crosshair.fresh = _provider.is_aim_fresh()
+	_crosshair.show_hit_ring = _show_hit_ring
+	if _show_hit_ring:
+		_crosshair.hit_ring_center = _camera.unproject_position(_target.bullseye_position())
+		_crosshair.hit_ring_radius = hit_tolerance
+	_overlay.update_info(_provider)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# 系统/调试热键（游戏逻辑的输入全部走 InputProvider，此处是允许的例外）
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_F1: _overlay.visible = not _overlay.visible
+			KEY_F2: _show_hit_ring = not _show_hit_ring
+			KEY_F9: _switch_provider(_provider is MouseGunProvider)
+			KEY_F11: _toggle_fullscreen()
+
+
+# ---------- 输入源管理 ----------
+
+func _switch_provider(use_udp: bool) -> void:
+	if _provider:
+		_provider.queue_free()
+	if use_udp:
+		_provider = UdpGunProvider.new()
+	else:
+		_provider = MouseGunProvider.new()
+	add_child(_provider)
+	_provider.shot.connect(_on_shot)
+	_provider.reloaded.connect(_on_reload)
+	_provider.coin.connect(func(): print("[Main] COIN 事件（投币逻辑 Week 2 接）"))
+	_provider.started.connect(func(): print("[Main] START 事件（关卡流程 Week 2 接）"))
+	print("[Main] 输入源切换为 %s" % _provider.provider_name())
+
+
+# ---------- 核心射击循环 ----------
+
+func _on_shot() -> void:
+	if not _ammo.consume():
+		_audio.blip(160.0, 0.09, 0.3)  # 空仓低哑声
+		_hud.set_ammo(0, _ammo.capacity)
+		return
+	_hud.set_ammo(_ammo.current, _ammo.capacity)
+	_audio.blip(880.0, 0.06, 0.3)
+	_flash_muzzle()
+
+	var aim := _provider.get_aim()
+	var bullseye_screen := _camera.unproject_position(_target.bullseye_position())
+	var hit := aim.distance_to(bullseye_screen) <= hit_tolerance
+	if hit:
+		hit = not _is_occluded(aim)  # raycast 验遮挡：中间有东西就不算
+
+	if hit:
+		var gained := _score.register_hit()
+		_hud.set_score(_score.score)
+		_hud.set_combo(_score.combo)
+		_spawn_hit_feedback(aim, gained)
+		_hitstop()
+	else:
+		_score.register_miss()
+		_hud.set_combo(0)
+
+
+func _on_reload() -> void:
+	_ammo.reload()
+	_hud.set_ammo(_ammo.current, _ammo.capacity)
+	_audio.blip(440.0, 0.05, 0.25)
+	_audio.blip(660.0, 0.05, 0.25)
+
+
+## 从准星位置打一条射线，第一个命中物不是标靶就算被遮挡
+func _is_occluded(aim: Vector2) -> bool:
+	var from := _camera.project_ray_origin(aim)
+	var to := from + _camera.project_ray_normal(aim) * 100.0
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return false  # 什么都没打到 → 无遮挡（屏幕距离判定已过关）
+	# 命中体属于标靶 → 无遮挡
+	return not (hit.collider as Node).is_ancestor_of(_target) \
+		and not _target.is_ancestor_of(hit.collider)
+
+
+# ---------- 命中反馈三件套 ----------
+
+## ① 顿帧 60ms（真实时间，不受 time_scale 影响）
+func _hitstop() -> void:
+	Engine.time_scale = 0.05
+	await get_tree().create_timer(0.06, true, false, true).timeout
+	Engine.time_scale = 1.0
+
+
+## ② 枪口火光：动态光源闪一下
+func _flash_muzzle() -> void:
+	_flash_light.light_energy = 8.0
+	await get_tree().create_timer(0.05, true, false, true).timeout
+	_flash_light.light_energy = 0.0
+
+
+## ③ 命中粒子 + 跳分数字
+func _spawn_hit_feedback(aim: Vector2, gained: int) -> void:
+	# 粒子打在准星对应的 3D 射线与靶面交点处（近似取靶心深度）
+	var depth := _camera.global_position.distance_to(_target.bullseye_position())
+	var pos := _camera.project_ray_origin(aim) + _camera.project_ray_normal(aim) * depth
+	_particles.global_position = pos
+	_particles.restart()
+
+	var label := Label3D.new()
+	label.text = "+%d" % gained
+	label.font_size = 96
+	label.modulate = Color(1.0, 0.9, 0.2)
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.global_position = pos + Vector3(0, 0.3, 0)
+	add_child(label)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "global_position:y", pos.y + 1.5, 0.6)
+	tween.tween_property(label, "modulate:a", 0.0, 0.6)
+	tween.chain().tween_callback(label.queue_free)
+
+
+func _toggle_fullscreen() -> void:
+	var win := get_window()
+	win.mode = Window.MODE_FULLSCREEN \
+		if win.mode != Window.MODE_FULLSCREEN else Window.MODE_WINDOWED
+
+
+# ---------- 场景搭建（程序化，零素材） ----------
+
+func _build_world() -> void:
+	# 环境光 + 纯色天光背景
+	var env := WorldEnvironment.new()
+	var e := Environment.new()
+	e.background_mode = Environment.BG_COLOR
+	e.background_color = Color(0.35, 0.5, 0.7)  # 卡通天蓝
+	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	e.ambient_light_color = Color(0.9, 0.9, 0.95)
+	e.ambient_light_energy = 0.6
+	env.environment = e
+	add_child(env)
+
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-50, -30, 0)
+	sun.light_energy = 1.2
+	add_child(sun)
+
+	# 固定机位：稍微俯视靶场
+	_camera = Camera3D.new()
+	_camera.position = Vector3(0, 2.5, 9)
+	_camera.rotation_degrees = Vector3(-10, 0, 0)
+	add_child(_camera)
+
+	# 地面（卡通绿）
+	var ground := MeshInstance3D.new()
+	var ground_mesh := PlaneMesh.new()
+	ground_mesh.size = Vector2(40, 30)
+	ground.mesh = ground_mesh
+	ground.material_override = _flat(Color(0.35, 0.7, 0.35))
+	add_child(ground)
+	_add_collider(ground, Vector3(40, 0.2, 30), Vector3(0, -0.1, 0))
+
+	# 背景板（靶场后墙，暖橙色衬托标靶）
+	var wall := MeshInstance3D.new()
+	var wall_mesh := BoxMesh.new()
+	wall_mesh.size = Vector3(40, 12, 0.5)
+	wall.mesh = wall_mesh
+	wall.position = Vector3(0, 6, -10)
+	wall.material_override = _flat(Color(0.95, 0.6, 0.3))
+	add_child(wall)
+	_add_collider(wall, Vector3(40, 12, 0.5), Vector3.ZERO)
+
+	# 几何装饰：两侧几个低多边形盒子/圆柱，丰富画面层次
+	_add_deco_box(Vector3(-7, 0.8, -4), Color(0.8, 0.3, 0.5))
+	_add_deco_box(Vector3(7.5, 0.6, -5), Color(0.3, 0.6, 0.9))
+	_add_deco_cylinder(Vector3(-5.5, 1.2, -8), Color(0.9, 0.75, 0.2))
+	_add_deco_cylinder(Vector3(6, 1.0, -8.5), Color(0.5, 0.35, 0.7))
+
+
+func _build_target() -> void:
+	_target = Target.new()
+	_target.position = Vector3(0, 2.0, -6)
+	add_child(_target)
+
+
+func _build_effects() -> void:
+	# 枪口光源（平时熄灭，开火瞬间点亮）
+	_flash_light = OmniLight3D.new()
+	_flash_light.position = Vector3(0, 1.5, 7)
+	_flash_light.light_color = Color(1.0, 0.8, 0.4)
+	_flash_light.light_energy = 0.0
+	_flash_light.omni_range = 12.0
+	add_child(_flash_light)
+
+	# 命中粒子：一次性迸发的小方块，卡通配色
+	_particles = GPUParticles3D.new()
+	_particles.amount = 24
+	_particles.lifetime = 0.5
+	_particles.one_shot = true
+	_particles.explosiveness = 1.0
+	_particles.emitting = false
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, 1, 0)
+	pm.spread = 60.0
+	pm.initial_velocity_min = 3.0
+	pm.initial_velocity_max = 7.0
+	pm.gravity = Vector3(0, -9.8, 0)
+	pm.scale_min = 0.05
+	pm.scale_max = 0.15
+	pm.color = Color(1.0, 0.85, 0.2)
+	_particles.process_material = pm
+	var quad := BoxMesh.new()
+	quad.size = Vector3(0.1, 0.1, 0.1)
+	_particles.draw_pass_1 = quad
+	add_child(_particles)
+
+	_audio = PlaceholderAudio.new()
+	add_child(_audio)
+
+
+func _build_ui() -> void:
+	_hud = Hud.new()
+	add_child(_hud)
+	_crosshair = Crosshair.new()
+	_crosshair.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ui := CanvasLayer.new()
+	ui.layer = 10
+	ui.add_child(_crosshair)
+	add_child(ui)
+	_overlay = DebugOverlay.new()
+	add_child(_overlay)
+
+
+# ---------- 小工具 ----------
+
+func _flat(color: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 1.0
+	return mat
+
+
+func _add_collider(visual: MeshInstance3D, size: Vector3, offset: Vector3) -> void:
+	var body := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = size
+	shape.shape = box
+	shape.position = offset
+	body.add_child(shape)
+	visual.add_child(body)
+
+
+func _add_deco_box(pos: Vector3, color: Color) -> void:
+	var m := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(1.2, 1.6, 1.2)
+	m.mesh = mesh
+	m.position = pos
+	m.rotation_degrees.y = randf_range(0, 45)
+	m.material_override = _flat(color)
+	add_child(m)
+
+
+func _add_deco_cylinder(pos: Vector3, color: Color) -> void:
+	var m := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.5
+	mesh.bottom_radius = 0.7
+	mesh.height = 2.4
+	mesh.radial_segments = 8  # 低多边形感
+	m.mesh = mesh
+	m.position = pos
+	m.material_override = _flat(color)
+	add_child(m)
