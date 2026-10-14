@@ -152,6 +152,7 @@ func _switch_provider(use_udp: bool) -> void:
 	_provider.reloaded.connect(_on_reload)
 	_provider.coin.connect(_on_coin)
 	_provider.started.connect(_on_start)
+	_provider.exited.connect(_on_exit)
 	print("[Main] 输入源切换为 %s" % _provider.provider_name())
 
 
@@ -171,6 +172,18 @@ func _on_start() -> void:
 		_audio.blip(1320.0, 0.12, 0.3)
 	else:
 		_audio.blip(160.0, 0.09, 0.3)  # 没币/没到时候的低哑提示
+
+
+func _on_exit() -> void:
+	if _levels == null:
+		return
+	if _levels.state == "attract":
+		get_tree().quit()  # 待机页再按退出 = 退出进程（电视端遥控器场景）
+		return
+	if _levels.abort():
+		_spawner.stop()
+		_level_ui.show_attract(_levels.credits)
+		_audio.blip(160.0, 0.09, 0.3)
 
 
 # ---------- 核心射击循环 ----------
@@ -502,7 +515,7 @@ func _add_outline(mi: MeshInstance3D, thickness := 0.04) -> void:
 	mat.albedo_color = Color(0.08, 0.08, 0.12)  # 近黑的深蓝，比纯黑柔和
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.cull_mode = BaseMaterial3D.CULL_FRONT
-	mat.grow_enabled = true
+	mat.grow = true  # Godot 4 属性名（Godot 3 的 grow_enabled 已改名，旧名只剩告警不生效）
 	mat.grow_amount = thickness
 	shell.material_override = mat
 	mi.add_child(shell)

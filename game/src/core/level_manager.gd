@@ -44,6 +44,15 @@ func insert_coin() -> void:
 	credits += 1
 
 
+## 退出本局回待机页（手机端 EXIT）。gameover 页退出也回待机；待机页返回 false
+func abort() -> bool:
+	if state == "attract":
+		return false
+	state = "attract"
+	state_changed.emit(state)
+	return true
+
+
 func can_start() -> bool:
 	# 再来一局（gameover）免投币；待机页（attract）必须先投币
 	return credits > 0 if state == "attract" else state == "gameover"

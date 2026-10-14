@@ -4,7 +4,7 @@ extends InputProvider
 ## UDP 手机光枪源（生产环境用）：
 ##   手机 App 通过局域网 UDP 发 ASCII 包到本机 9000 端口（可配置）
 ##   坐标包 "x,y"（1920×1080 规范坐标，约 60-120Hz）→ One Euro Filter 平滑
-##   事件包 SHOT / RELOAD / COIN / START → 对应信号
+##   事件包 SHOT / RELOAD / COIN / START / EXIT → 对应信号
 ##   0.6 秒无坐标包则准星停移（保持最后位置）并标记过期
 
 @export var port := 9000
@@ -53,6 +53,7 @@ func _process(_delta: float) -> void:
 					"reload": reloaded.emit()
 					"coin": coin.emit()
 					"start": started.emit()
+					"exit": exited.emit()
 			_:
 				invalid_count += 1
 		# 每 30 个坐标包打一次日志，手工联调时确认链路通

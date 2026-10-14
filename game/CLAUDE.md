@@ -1,6 +1,6 @@
 # ArcGun 工程指南（给 AI 助手 / 新成员）
 
-配合"手机当光枪"外设的 3D 光枪射击游戏。手机 App 经局域网 UDP 发瞄准坐标流（ASCII `"x,y"`，1920×1080 规范坐标，60-120Hz）与事件包（`SHOT`/`RELOAD`/`COIN`/`START`）。PC 先行，后续上 Android 电视。画面：低多边形卡通渲染（inverted-hull 描边 + 哑光纯色），零外部素材。
+配合"手机当光枪"外设的 3D 光枪射击游戏。手机 App 经局域网 UDP 发瞄准坐标流（ASCII `"x,y"`，1920×1080 规范坐标，60-120Hz）与事件包（`SHOT`/`RELOAD`/`COIN`/`START`/`EXIT`）。PC 先行，后续上 Android 电视。画面：低多边形卡通渲染（inverted-hull 描边 + 哑光纯色），零外部素材。
 
 ## 工程结构
 
@@ -67,6 +67,6 @@ D:/tvgun/.venv/Scripts/python.exe game/tests/udp_sender.py --n 300 --shot-every 
 | F2 | 命中判定圈可视化（最近靶的宽容度半径） |
 | F9 | 切换输入源（鼠标 ↔ UDP） |
 | F11 | 全屏切换 |
-| R / C / 回车 | 换弹 / 投币 / 开始（鼠标源，对应 UDP 的 RELOAD/COIN/START） |
+| R / C / 回车 / Esc | 换弹 / 投币 / 开始 / 退出本局（鼠标源，对应 UDP 的 RELOAD/COIN/START/EXIT） |
 
 启动参数（`--` 后）：`--udp`、`--freeze-target`、`--auto-shots`、`--level=N`（详见 README）。

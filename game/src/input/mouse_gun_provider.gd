@@ -26,6 +26,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_R: reloaded.emit()
 			KEY_C: coin.emit()        # 模拟投币（手机端 COIN）
 			KEY_ENTER: started.emit() # 模拟开始（手机端 START）
+			KEY_ESCAPE: exited.emit() # 模拟退出（手机端 EXIT）
 
 
 func get_aim() -> Vector2:

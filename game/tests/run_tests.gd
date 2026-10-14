@@ -52,11 +52,13 @@ func _test_protocol() -> void:
 	_assert(r.ok and is_equal_approx(r.x, 960.5), "带空白的坐标包应解析")
 
 	# 合法事件包
-	for e in ["SHOT", "RELOAD", "COIN", "START"]:
+	for e in ["SHOT", "RELOAD", "COIN", "START", "EXIT"]:
 		r = Parser.parse(e)
 		_assert(r.ok and r.type == "event", "事件包 %s 应解析" % e)
 	r = Parser.parse("shot")  # 大小写不敏感
 	_assert(r.ok and r.event == "shot", "事件包应大小写不敏感")
+	r = Parser.parse("exit")
+	_assert(r.ok and r.event == "exit", "EXIT 事件应解析为 exit")
 
 	# 畸形包
 	for bad in ["", "abc", "1,2,3", "960,abc", "SHOTX", "2000,540", "-5,100", "960,2000", "1,,2"]:
@@ -267,6 +269,19 @@ func _test_level_flow() -> void:
 			m.tick(LevelMgr.RESULT_TIME + 0.01)
 	_assert(m.state == "gameover", "3 关过完进总结算")
 	_assert(win_result[0], "全通关 win=true")
+
+	# EXIT：进行中退出 → 回待机页；待机页退出 → false（由场景层退出进程）
+	s = Score.new()
+	m = LevelMgr.new(_mini_levels(), s)
+	_assert(not m.abort(), "待机页 abort 应返回 false")
+	m.insert_coin()
+	m.press_start()
+	m.tick(LevelMgr.TITLE_TIME + 0.01)
+	_assert(m.state == "playing", "进入开打状态")
+	_assert(m.abort(), "开打中 abort 应成功")
+	_assert(m.state == "attract", "abort 后回待机页")
+	_assert(m.credits == 0, "abort 不退币")
+	_assert(not m.can_start(), "回待机后无币不能再开")
 
 
 # ---------- 波次调度 ----------

@@ -13,6 +13,7 @@ signal shot      ## 开火
 signal reloaded  ## 换弹
 signal coin      ## 投币
 signal started   ## 开始
+signal exited    ## 退出本局（待机页再按 = 退出进程）
 
 
 ## 当前准星位置（屏幕像素坐标）

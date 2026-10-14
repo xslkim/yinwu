@@ -4,10 +4,10 @@ extends RefCounted
 ## UDP 协议解析器（纯逻辑，不依赖场景树）
 ## 两种包：
 ##   坐标包  "x,y"   —— ASCII，浮点（一位小数），1920×1080 规范坐标系
-##   事件包  SHOT / RELOAD / COIN / START —— 纯文本
+##   事件包  SHOT / RELOAD / COIN / START / EXIT —— 纯文本
 ## 返回 Dictionary：
 ##   合法坐标 → {"ok": true, "type": "aim", "x": float, "y": float}
-##   合法事件 → {"ok": true, "type": "event", "event": "shot"/"reload"/"coin"/"start"}
+##   合法事件 → {"ok": true, "type": "event", "event": "shot"/"reload"/"coin"/"start"/"exit"}
 ##   畸形包   → {"ok": false, "type": "invalid"}
 
 const AIM_MAX_X := 1920.0
@@ -18,6 +18,7 @@ const EVENTS := {
 	"RELOAD": "reload",
 	"COIN": "coin",
 	"START": "start",
+	"EXIT": "exit",
 }
 
 
