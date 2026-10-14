@@ -33,6 +33,8 @@
 | sfx_gold_spawn.wav | attention grabbing bell ring, magical shimmer sparkle, cartoon, short | 1.24s | -16.1 |
 | sfx_escape.wav | cartoon slide whistle whoosh, quick slipping away escape sound, short | 1.04s | -16.5 |
 | sfx_ui_click.wav | short clean UI click, soft cartoon button tap, dry | 0.54s | -16.2 |
+| sfx_empty_1.wav | single dry toy gun trigger click, empty chamber snap, cartoon plastic click, very short | 0.54s | -16.2 |
+| sfx_empty_2.wav | quick hollow click clack, cartoon empty gun trigger, light wooden snap, very short, dry | 0.54s | -16.0 |
 | stinger_win.wav | cheerful cartoon victory fanfare, brass and xylophone, arcade game win stinger, upbeat ending | 4.04s | -16.2 |
 | stinger_lose.wav | cartoon lose stinger, descending sad trombone wah wah, playful, gentle ending | 4.04s | -15.9 |
 
