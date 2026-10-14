@@ -416,17 +416,17 @@ func _test_audio_fallback() -> void:
 	am.play_bgm("play")
 	am.blip()
 	am.free()
-	# 有素材时解析出变体
+	# 有素材时解析出变体（命名按交付约定：sfx_ 前缀，变体 _1 起）
 	var dir := "user://test_audio"
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
-	var h := FileAccess.open(dir + "/shot.wav", FileAccess.WRITE)
+	var h := FileAccess.open(dir + "/sfx_shot_1.wav", FileAccess.WRITE)
 	h.store_string("fake wav")
 	h.close()
 	var am2 := AudioMgr.new()
 	am2.audio_dir = dir
-	_assert(am2.resolve_clip("shot").ends_with("shot.wav"), "素材存在时解析到 WAV")
+	_assert(am2.resolve_clip("shot").ends_with("sfx_shot_1.wav"), "素材存在时解析到 WAV 变体")
 	am2.free()
-	DirAccess.remove_absolute(dir + "/shot.wav")
+	DirAccess.remove_absolute(dir + "/sfx_shot_1.wav")
 	DirAccess.remove_absolute(dir)
 
 
@@ -454,3 +454,31 @@ func _test_settings() -> void:
 	_assert(is_equal_approx(s2.volumes.master, 1.0) and absf(s2.volumes.music - 0.33) < 0.001,
 		"设置存盘读回一致")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+# ---------- 素材集成完整性（素材已入库，映射必须全部命中） ----------
+
+func _test_asset_integration() -> void:
+	var am := AudioMgr.new()
+	# 每个 play() 名都解析到交付的 WAV（empty 是常驻合成 fallback，例外）
+	for clip_name in AudioMgr.CLIP_MAP:
+		if clip_name == "empty":
+			continue
+		_assert(am.resolve_clip(clip_name) != "", "音效 %s 应解析到交付文件" % clip_name)
+	# 变体数：shot/hit 各 3 个，hit_gold 2 个
+	_assert(Assets.variants("res://assets/audio", "sfx_shot", ["wav"]).size() == 3, "shot 3 变体")
+	_assert(Assets.variants("res://assets/audio", "sfx_hit", ["wav"]).size() == 3, "hit 3 变体")
+	_assert(Assets.variants("res://assets/audio", "sfx_hit_gold", ["wav"]).size() == 2, "hit_gold 2 变体")
+	# 语音与 BGM
+	for v in AudioMgr.VOICE_NAMES:
+		_assert(not Assets.variants("res://assets/audio", "voice_" + v, ["wav"]).is_empty(),
+			"语音 voice_%s 应有文件" % v)
+	for t in ["menu", "play", "intense"]:
+		_assert(am.resolve_bgm(t) != "", "BGM %s 应有文件" % t)
+	am.free()
+	# 贴图：全部 14 张应能解码
+	for tex in ["target_face_normal", "target_face_hostage", "target_face_gold",
+			"sky", "ground", "wall", "muzzle_flash", "particle_hit", "particle_star",
+			"ui_coin", "ui_ammo", "ui_crosshair", "poster"]:
+		_assert(Assets.texture_or_null("res://assets/textures/%s.png" % tex) != null,
+			"贴图 %s 应能加载" % tex)

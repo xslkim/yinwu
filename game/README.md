@@ -45,13 +45,23 @@ bash game/tests/smoke.sh
 bash game/tests/smoke.sh --full
 ```
 
-## 素材目录约定（assets/ 由素材管线供货，游戏缺文件自动回退程序化 fallback）
+## 素材目录约定（assets/ 已入库，来源与授权见 assets/ATTRIBUTION.md）
 
-贴图 `assets/textures/`：`face_normal.png` / `face_hostage.png` / `face_gold.png`（靶脸）、
-`ground.png`、`sky.png`、`crosshair.png`。
-音频 `assets/audio/`：`play()` 名 → `<名>.wav`（同名变体 `<名>_2.wav` … 最多 8 个，随机播放，
-pitch ±5% 随机）：`shot empty reload coin start hit hostage escape combo level_pass level_fail win lose`。
-BGM：`bgm_menu` / `bgm_play` / `bgm_intense`（ogg|wav|mp3，自动循环 + 1s 交叉淡化）。
+贴图 `assets/textures/`：`target_face_normal/hostage/gold.png`（靶脸面片）、
+`sky.png`（全景天空）、`ground.png` / `wall.png`（四方连续平铺）、`muzzle_flash.png`（枪口火光）、
+`particle_hit.png` / `particle_star.png`（粒子）、`ui_crosshair.png`（准星）、
+`ui_coin.png`（待机页金币）、`ui_ammo.png`（HUD 弹药图标）、`poster.png`（待机页标题图）。
+
+音频 `assets/audio/`：`play()` 事件名 → 文件名映射（变体 `_1.._3` 随机 + pitch ±5%）：
+`shot→sfx_shot`、`hit→sfx_hit`、`hit_gold→sfx_hit_gold`、`hostage→sfx_hostage`、`reload→sfx_reload`、
+`coin→sfx_coin`、`start→sfx_start`、`pass→sfx_pass`、`fail→sfx_fail`、`gameover→sfx_gameover`、
+`combo→sfx_combo`、`gold_spawn→sfx_gold_spawn`、`escape→sfx_escape`、`ui_click→sfx_ui_click`、
+`stinger_win/lose→同名`；`empty`（空仓）无素材，常驻合成 fallback。
+语音播报 `voice()`：`voice_start/pass/fail/gameover/combo.wav`（独立 Voice 总线，与音效叠加）。
+BGM：`bgm_menu/play/intense.wav`（无缝循环 + 1s 交叉淡化；attract/demo→menu，L1-L4→play，
+L5-L6 与残局→intense，gameover 淡出静音）。
+
+所有素材缺失时自动回退程序化占位（纯色/合成音），游戏永远能跑。
 
 ## 手机联调
 

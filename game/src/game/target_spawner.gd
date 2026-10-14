@@ -5,6 +5,7 @@ extends Node3D
 ## 只在 LevelManager 处于 playing 时推进时钟（由 main 每帧驱动 tick）
 
 signal target_escaped(target: Target)  ## 逃靶（dwell 超时溜走），main 决定是否扣分
+signal gold_spawned                    ## 金靶出场（提示音钩子）
 
 @export var lane_y := 2.0   ## 靶道高度
 @export var lane_z := -6.0  ## 靶道纵深
@@ -66,6 +67,8 @@ func _spawn(wave: Dictionary) -> void:
 	t.escaped.connect(_on_escaped)
 	t.tree_exited.connect(func(): _alive.erase(t))
 	_alive.append(t)
+	if t.target_type == Target.Type.GOLD:
+		gold_spawned.emit()
 
 
 func _on_escaped(t: Target) -> void:

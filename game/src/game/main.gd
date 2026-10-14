@@ -21,6 +21,7 @@ var _level_ui: LevelUi
 var _overlay: DebugOverlay
 var _audio: AudioManager
 var _flash_light: OmniLight3D
+var _flash_sprite: MeshInstance3D  ## muzzle_flash 贴图（素材缺失时只闪光源）
 var _particles: GPUParticles3D
 var _spawner: TargetSpawner
 
@@ -116,6 +117,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_F3: _cycle_volume()
 			KEY_F9: _switch_provider(_provider is MouseGunProvider)
 			KEY_F11: _toggle_fullscreen()
+		_audio.play("ui_click")
 
 
 ## F3：主音量循环降档（100%→70%→40%→静音），持久化到 user://settings.cfg
@@ -150,6 +152,7 @@ func _build_level_flow() -> void:
 	_spawner = TargetSpawner.new()
 	add_child(_spawner)
 	_spawner.target_escaped.connect(_on_target_escaped)
+	_spawner.gold_spawned.connect(func(): _audio.play("gold_spawn"))
 	_levels = LevelManager.new(LevelDefs.all(), _score)
 	# 调试跳关：`--level=N` 直接从中途开打（验收人质/金靶用）
 	for a in OS.get_cmdline_user_args():
@@ -186,19 +189,23 @@ func _on_level_started(idx: int, def: Dictionary) -> void:
 func _on_level_finished(_idx: int, passed: bool, level_score: int) -> void:
 	_spawner.stop()
 	_level_ui.show_level_result(passed, level_score, _levels.current_level().goal)
-	_audio.play("level_pass" if passed else "level_fail")
+	_audio.play("pass" if passed else "fail")
+	_audio.voice("pass" if passed else "fail")
 
 
 func _on_game_finished(win: bool) -> void:
 	_level_ui.show_gameover(win, _score)
-	_audio.play("win" if win else "lose")
-	_audio.play_bgm("menu")
+	_audio.stop_bgm()  # BGM 淡出，让 stinger 唱主角
+	_audio.play("gameover")
+	_audio.voice("gameover")
+	_audio.play("stinger_win" if win else "stinger_lose")
 
 
 ## 逃靶：dwell 超时溜走。L4 起扣分断连击（关卡表 escape_penalty 控制）
 func _on_target_escaped(t: Target) -> void:
 	if _levels == null or _levels.state != "playing":
 		return
+	_audio.play("escape")  # 溜走提示音不受惩罚豁免影响
 	if not _levels.current_level().get("escape_penalty", false):
 		return
 	_score.register_escape()
@@ -206,7 +213,6 @@ func _on_target_escaped(t: Target) -> void:
 	_hud.set_combo(0)
 	_spawn_score_label(_camera.unproject_position(t.bullseye_position()),
 		"-%d 逃靶" % ScoreKeeper.ESCAPE_PENALTY, Color(1.0, 0.5, 0.2))
-	_audio.play("escape")
 
 
 # ---------- 输入源管理 ----------
@@ -241,6 +247,7 @@ func _on_start() -> void:
 		return
 	if _levels.press_start():
 		_audio.play("start")
+		_audio.voice("start")
 	else:
 		_audio.play("empty")  # 没币/没到时候的低哑提示
 
@@ -283,12 +290,14 @@ func _on_shot() -> void:
 			var gained := _score.register_hit(target.base_points)
 			_hud.set_score(_score.score)
 			_hud.set_combo(_score.combo)
+			_audio.play("hit_gold" if target.target_type == Target.Type.GOLD else "hit")
 			_spawn_hit_feedback(aim, target, gained)
 			_hitstop()
-			# 连击里程碑（×5/×10/×15…）：大号金色跳字 + 专属音效
+			# 连击里程碑（×5/×10/×15…）：大号金色跳字 + 专属音效 + 语音播报
 			if ScoreKeeper.is_combo_milestone(_score.combo):
 				_spawn_combo_label(_score.combo)
 				_audio.play("combo")
+				_audio.voice("combo")
 		# 联调钉死靶打不烂（要反复测命中率）；正常靶命中即销毁
 		if target != _freeze_target:
 			target.destroy_with_hit()
@@ -350,11 +359,29 @@ func _hitstop() -> void:
 	_hitstop_active = false
 
 
-## ② 枪口火光：动态光源闪一下
+## ② 枪口火光：动态光源 + 贴图闪一下
 func _flash_muzzle() -> void:
 	_flash_light.light_energy = 8.0
+	if _flash_sprite:
+		_flash_sprite.visible = true
 	await get_tree().create_timer(0.05, true, false, true).timeout
 	_flash_light.light_energy = 0.0
+	if _flash_sprite:
+		_flash_sprite.visible = false
+
+
+## 粒子面片：billboard + 透明裁剪 + 无光照（特效贴图不受场景光影响）
+func _particle_quad(tex: Texture2D) -> QuadMesh:
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.3, 0.3)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = tex
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES  # 粒子专用公告板（含旋转/缩放）
+	mat.billboard_keep_scale = true
+	quad.material = mat
+	return quad
 
 
 ## ③ 命中粒子 + 跳分数字
@@ -472,13 +499,19 @@ func _build_world() -> void:
 	lane.material_override = _flat(Color(0.38, 0.68, 0.28))
 	add_child(lane)
 
-	# 背景板（矮墙不抢戏：暖橙墙 + 顶部深红压边）
+	# 背景板（矮墙不抢戏：暖橙墙 + 顶部深红压边）；wall.png（马戏团条纹）存在则平铺
 	var wall := MeshInstance3D.new()
 	var wall_mesh := BoxMesh.new()
 	wall_mesh.size = Vector3(40, 6, 0.5)
 	wall.mesh = wall_mesh
 	wall.position = Vector3(0, 3, -10)
-	wall.material_override = _flat(Color(0.9, 0.45, 0.15))
+	var wall_mat := _flat(Color(0.9, 0.45, 0.15))
+	var wall_tex := AssetLib.texture_or_null("res://assets/textures/wall.png")
+	if wall_tex:
+		wall_mat.albedo_texture = wall_tex
+		wall_mat.albedo_color = Color.WHITE
+		wall_mat.uv1_scale = Vector3(10, 1.2, 1)  # 条纹四方连续平铺
+	wall.material_override = wall_mat
 	add_child(wall)
 	_add_collider(wall, Vector3(40, 6, 0.5), Vector3.ZERO)
 	var trim := MeshInstance3D.new()
@@ -501,15 +534,30 @@ func _build_world() -> void:
 
 
 func _build_effects() -> void:
-	# 枪口光源（平时熄灭，开火瞬间点亮）
+	# 枪口火光：动态光源 + muzzle_flash 贴图闪现（无贴图时只闪光）
 	_flash_light = OmniLight3D.new()
 	_flash_light.position = Vector3(0, 1.5, 7)
 	_flash_light.light_color = Color(1.0, 0.8, 0.4)
 	_flash_light.light_energy = 0.0
 	_flash_light.omni_range = 12.0
 	add_child(_flash_light)
+	var flash_tex := AssetLib.texture_or_null("res://assets/textures/muzzle_flash.png")
+	if flash_tex:
+		_flash_sprite = MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		quad.size = Vector2(1.2, 1.2)
+		_flash_sprite.mesh = quad
+		var mat := StandardMaterial3D.new()
+		mat.albedo_texture = flash_tex
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		_flash_sprite.material_override = mat
+		_flash_sprite.position = Vector3(0, 1.3, 5.5)
+		_flash_sprite.visible = false
+		add_child(_flash_sprite)
 
-	# 命中粒子：一次性迸发的大颗粒亮块，远机位也要看得见
+	# 命中粒子：particle_hit（星星爆点）+ particle_star（金星）双通道
 	_particles = GPUParticles3D.new()
 	_particles.amount = 40
 	_particles.lifetime = 0.7
@@ -526,13 +574,22 @@ func _build_effects() -> void:
 	pm.scale_max = 0.28
 	pm.color = Color(1.0, 0.85, 0.2)
 	_particles.process_material = pm
-	var quad := BoxMesh.new()
-	quad.size = Vector3(0.16, 0.16, 0.16)
-	var quad_mat := StandardMaterial3D.new()
-	quad_mat.albedo_color = Color(1.0, 0.85, 0.2)
-	quad_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED  # 自发光感
-	quad.material = quad_mat
-	_particles.draw_pass_1 = quad
+	# 有贴图用 billboard 面片，没有回退纯色小方块
+	var hit_tex := AssetLib.texture_or_null("res://assets/textures/particle_hit.png")
+	var star_tex := AssetLib.texture_or_null("res://assets/textures/particle_star.png")
+	if hit_tex:
+		_particles.draw_pass_1 = _particle_quad(hit_tex)
+	else:
+		var quad := BoxMesh.new()
+		quad.size = Vector3(0.16, 0.16, 0.16)
+		var quad_mat := StandardMaterial3D.new()
+		quad_mat.albedo_color = Color(1.0, 0.85, 0.2)
+		quad_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED  # 自发光感
+		quad.material = quad_mat
+		_particles.draw_pass_1 = quad
+	if star_tex:
+		_particles.draw_passes = 2  # 先扩容再赋值，否则报 draw_passes 越界
+		_particles.draw_pass_2 = _particle_quad(star_tex)
 	add_child(_particles)
 
 	_audio = AudioManager.new()

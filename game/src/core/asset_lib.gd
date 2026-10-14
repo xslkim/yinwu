@@ -4,22 +4,22 @@ extends RefCounted
 ## 素材库：统一的"有则用、无则 fallback"加载逻辑
 ## 素材 Agent 的产物放 res://assets/audio|textures/，本类只读不写
 ##
-## 命名约定：
-##   贴图：<name>.png / .jpg / .webp
-##   音效：<name>.wav，同名变体 <name>_2.wav、<name>_3.wav …（最多 8 个）
+## 命名约定（与素材管线 MANIFEST 对齐）：
+##   贴图：<name>.png
+##   音效：<name>.wav，同名变体 <name>_1.wav、<name>_2.wav …（从 1 起，最多 8 个；也兼容无编号本体）
 ##   BGM： bgm_<track>.ogg / .wav / .mp3
 
 const MAX_VARIANTS := 8
 
 
-## 返回 base 的所有现存变体路径（含无后缀的本体），按编号升序；一个都没有返回空
+## 返回 base 的所有现存变体路径（无编号本体 + _1.._8 编号变体），按编号升序；一个都没有返回空
 static func variants(dir: String, base: String, exts: PackedStringArray) -> PackedStringArray:
 	var found := PackedStringArray()
 	for ext in exts:
 		var p := "%s/%s.%s" % [dir, base, ext]
 		if ResourceLoader.exists(p) or FileAccess.file_exists(p):
 			found.append(p)
-		for i in range(2, MAX_VARIANTS + 1):
+		for i in range(1, MAX_VARIANTS + 1):
 			p = "%s/%s_%d.%s" % [dir, base, i, ext]
 			if ResourceLoader.exists(p) or FileAccess.file_exists(p):
 				found.append(p)

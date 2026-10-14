@@ -15,7 +15,7 @@ var _texture: Texture2D  ## assets/textures/crosshair.png 存在则用贴图准�
 
 
 func _ready() -> void:
-	_texture = AssetLib.texture_or_null("res://assets/textures/crosshair.png")
+	_texture = AssetLib.texture_or_null("res://assets/textures/ui_crosshair.png")
 
 
 func _process(_delta: float) -> void:
@@ -25,8 +25,8 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	var main_color := Color.WHITE if fresh else Color(1, 1, 1, 0.35)
 	if _texture:
-		# 贴图准星：64px 见方居中
-		draw_texture(_texture, aim - Vector2(32, 32), main_color)
+		# 贴图准星：72px 见方居中（draw_texture 不缩放，必须用 rect 版）
+		draw_texture_rect(_texture, Rect2(aim - Vector2(36, 36), Vector2(72, 72)), false, main_color)
 	else:
 		_draw_procedural(main_color)
 	if show_hit_ring:

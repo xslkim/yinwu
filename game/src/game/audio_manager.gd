@@ -1,29 +1,45 @@
 class_name AudioManager
 extends Node
 
-## 音频管理器：统一音效/BGM 出口
-##   play(name)  —— 优先播 res://assets/audio/<name>.wav（同名 _2.._8 变体随机 + pitch ±5%），
-##                  文件不存在时回退到程序合成音（素材 Agent 交货前游戏也能响）
-##   play_bgm(track) —— "menu"/"play"/"intense" 三轨交叉淡化，文件缺失静音不报错
-##   blip(...)   —— 合成音兼容层（老调用直接可用）
+## 音频管理器：统一音效/语音/BGM 出口
+##   play(name)  —— 按 CLIP_MAP 映射到 res://assets/audio/ 的 WAV（变体 _1.._8 随机 + pitch ±5%），
+##                  文件缺失时回退程序合成音（fallback 永不缺席，素材丢了游戏也照跑）
+##   voice(name) —— 中文语音播报（voice_<name>.wav），独立 Voice 总线，可与音效叠加
+##   play_bgm(track) —— menu/play/intense 三轨 1s 交叉淡化；stop_bgm() 淡出静音
+##   blip(...)   —— 合成音兼容层
 ##
-## 文件名 ↔ play() 名映射（素材 Agent 按此交货）：
-##   shot 开火 / empty 空仓 / reload 换弹 / coin 投币 / start 开始
-##   hit 命中 / hostage 误伤人质 / escape 逃靶 / combo 连击里程碑
-##   level_pass 过关 / level_fail 失败 / win 通关 / lose GAMEOVER
-##   bgm_menu / bgm_play / bgm_intense （ogg|wav|mp3，循环）
+## 事件点对照（详见 MANIFEST）：
+##   shot 开火 / hit 命中 / hit_gold 金靶命中 / hostage 误伤 / reload 换弹 / empty 空仓(常驻合成)
+##   coin 投币 / start 开始 / pass 过关 / fail 失败 / gameover 总结算 / combo 连击里程碑
+##   gold_spawn 金靶出现 / escape 逃靶 / ui_click 调试键 / stinger_win / stinger_lose
 
 @export var audio_dir := "res://assets/audio"
+
+## play() 事件名 → 文件名 base（空串 = 无素材常驻合成 fallback）
+const CLIP_MAP := {
+	"shot": "sfx_shot", "hit": "sfx_hit", "hit_gold": "sfx_hit_gold",
+	"hostage": "sfx_hostage", "reload": "sfx_reload", "coin": "sfx_coin",
+	"start": "sfx_start", "pass": "sfx_pass", "fail": "sfx_fail",
+	"gameover": "sfx_gameover", "combo": "sfx_combo", "gold_spawn": "sfx_gold_spawn",
+	"escape": "sfx_escape", "ui_click": "sfx_ui_click",
+	"stinger_win": "stinger_win", "stinger_lose": "stinger_lose",
+	"empty": "",
+}
+
+## 语音播报名 → voice_<name>.wav
+const VOICE_NAMES := ["start", "pass", "fail", "gameover", "combo"]
 
 ## 合成音 fallback 参数表：[频率 Hz, 时长 s, 音量]
 const SYNTH := {
 	"shot": [880.0, 0.06, 0.3], "empty": [160.0, 0.09, 0.3],
 	"reload": [440.0, 0.05, 0.25], "coin": [990.0, 0.1, 0.3],
 	"start": [1320.0, 0.12, 0.3], "hit": [660.0, 0.05, 0.25],
-	"hostage": [140.0, 0.15, 0.35], "escape": [300.0, 0.18, 0.3],
-	"combo": [1560.0, 0.15, 0.35], "level_pass": [660.0, 0.2, 0.3],
-	"level_fail": [180.0, 0.2, 0.3], "win": [880.0, 0.4, 0.35],
-	"lose": [150.0, 0.4, 0.35],
+	"hit_gold": [1200.0, 0.08, 0.3], "hostage": [140.0, 0.15, 0.35],
+	"escape": [300.0, 0.18, 0.3], "combo": [1560.0, 0.15, 0.35],
+	"gold_spawn": [1800.0, 0.1, 0.25], "ui_click": [700.0, 0.03, 0.2],
+	"pass": [660.0, 0.2, 0.3], "fail": [180.0, 0.2, 0.3],
+	"gameover": [150.0, 0.4, 0.35], "stinger_win": [880.0, 0.4, 0.35],
+	"stinger_lose": [150.0, 0.4, 0.35],
 }
 const BGM_TRACKS := ["menu", "play", "intense"]
 const BGM_FADE := 1.0  ## 交叉淡化秒数
@@ -43,8 +59,8 @@ func _ready() -> void:
 	if DisplayServer.get_name() == "headless":
 		_muted_headless = true
 		return
-	# 音乐/音效独立总线（音量设置用）
-	for bus in ["Music", "SFX"]:
+	# 音乐/音效/语音独立总线（音量设置与语音叠加用）
+	for bus in ["Music", "SFX", "Voice"]:
 		if AudioServer.get_bus_index(bus) < 0:
 			AudioServer.add_bus()
 			AudioServer.set_bus_name(AudioServer.bus_count - 1, bus)
@@ -79,7 +95,10 @@ func _exit_tree() -> void:
 
 ## 解析音效文件路径（纯查询，不进树也能测）；无文件返回 ""
 func resolve_clip(clip_name: String) -> String:
-	return AssetLib.pick_variant(audio_dir, clip_name, ["wav"], _rng)
+	var base: String = CLIP_MAP.get(clip_name, clip_name)
+	if base == "":
+		return ""
+	return AssetLib.pick_variant(audio_dir, base, ["wav"], _rng)
 
 
 func play(clip_name: String) -> void:
@@ -93,10 +112,26 @@ func play(clip_name: String) -> void:
 	if stream == null:
 		_fallback(clip_name)
 		return
+	_spawn_player(stream, "SFX")
+
+
+## 语音播报：与音效叠加，不打断 BGM；无文件静默
+func voice(voice_name: String) -> void:
+	if _muted_headless or not voice_name in VOICE_NAMES:
+		return
+	var path := AssetLib.pick_variant(audio_dir, "voice_" + voice_name, ["wav"], _rng)
+	if path == "":
+		return
+	var stream: AudioStream = load(path)
+	if stream:
+		_spawn_player(stream, "Voice")
+
+
+func _spawn_player(stream: AudioStream, bus: String) -> void:
 	var p := AudioStreamPlayer.new()
 	p.stream = stream
-	p.bus = "SFX"
-	p.pitch_scale = _rng.randf_range(0.95, 1.05)  # 同一音效反复播不单调
+	p.bus = bus
+	p.pitch_scale = _rng.randf_range(0.95, 1.05)  # 反复播不单调
 	add_child(p)
 	p.finished.connect(p.queue_free)
 	p.play()
@@ -127,7 +162,7 @@ func blip(freq := 880.0, dur := 0.07, volume := 0.25) -> void:
 
 ## 解析 BGM 文件路径；无文件返回 ""
 func resolve_bgm(track: String) -> String:
-	return AssetLib.pick_variant(audio_dir, "bgm_" + track, ["ogg", "wav", "mp3"], _rng)
+	return AssetLib.pick_variant(audio_dir, "bgm_" + track, ["wav", "ogg", "mp3"], _rng)
 
 
 ## 切换 BGM（交叉淡化 1s）；track 需为 menu/play/intense，文件缺失则淡出后静音
@@ -155,6 +190,17 @@ func play_bgm(track: String) -> void:
 		else:
 			tween.tween_property(p, "volume_db", -60.0, BGM_FADE)
 			tween.tween_callback(p.stop)
+
+
+## 总结算页：BGM 淡出（不回 menu，让 stinger 唱主角）
+func stop_bgm() -> void:
+	if _muted_headless:
+		return
+	_bgm_current = ""
+	for p in _bgm_players:
+		var tween := create_tween()
+		tween.tween_property(p, "volume_db", -60.0, BGM_FADE)
+		tween.tween_callback(p.stop)
 
 
 ## 应用音量设置（0-1 线性 → dB）

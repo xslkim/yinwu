@@ -140,17 +140,27 @@ func _build_body(torso_color: Color, head_color: Color, with_dot: bool, face_nam
 	head_mesh.radial_segments = 12  # 低多边形感
 	head_mesh.rings = 6
 	head.mesh = head_mesh
-	# 贴图接口：assets/textures/face_<type>.png 存在就用，否则程序化纯色
-	var head_mat := _flat(head_color)
-	var face := AssetLib.texture_or_null("res://assets/textures/face_%s.png" % face_name)
-	if face:
-		head_mat.albedo_texture = face
-		head_mat.albedo_color = Color.WHITE  # 有贴图时取消染色
-	head.material_override = head_mat
+	head.material_override = _flat(head_color)
 	_bullseye.add_child(head)
 	_outline(head)
+	# 脸贴图接口：assets/textures/target_face_<type>.png 存在就贴朝向相机的面片，
+	# 否则保持程序化纯色（+ 人质的程序眼）
+	var face := AssetLib.texture_or_null("res://assets/textures/target_face_%s.png" % face_name)
+	if face:
+		var plate := MeshInstance3D.new()
+		var plate_mesh := QuadMesh.new()
+		plate_mesh.size = Vector2(0.8, 0.8)
+		plate.mesh = plate_mesh
+		plate.position.z = 0.53  # 必须探出头球表面（半径 0.5），否则嵌进球里被遮住
+		var plate_mat := StandardMaterial3D.new()
+		plate_mat.albedo_texture = face
+		plate_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		plate_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED  # 脸不受光，保证颜色正
+		plate.material_override = plate_mat
+		_bullseye.add_child(plate)
 
-	if with_dot:
+	if with_dot and face == null:
+		# 白色靶心点是无脸贴图时的 fallback；有脸贴图会被它挡住中心
 		var dot := MeshInstance3D.new()
 		var dot_mesh := SphereMesh.new()
 		dot_mesh.radius = 0.2
@@ -170,8 +180,10 @@ func _build_body(torso_color: Color, head_color: Color, with_dot: bool, face_nam
 	_bullseye.add_child(body)
 
 
-## 人质的"脸"：两点黑眼睛占位；face_hostage.png 贴图到位后由贴图接管表情
+## 人质的"脸"：两点黑眼睛占位；target_face_hostage.png 贴图到位后面片接管，眼睛不叠加
 func _build_face() -> void:
+	if AssetLib.texture_or_null("res://assets/textures/target_face_hostage.png"):
+		return
 	for x in [-0.16, 0.16]:
 		var eye := MeshInstance3D.new()
 		var eye_mesh := SphereMesh.new()

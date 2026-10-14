@@ -11,6 +11,8 @@ var _goal_label: Label        ## 计时条旁的目标分提示
 var _stats_holder: CenterContainer  ## 总结算页居中容器
 var _stats_panel: PanelContainer
 var _stats_label: Label
+var _poster: TextureRect            ## attract 待机页标题图（poster.png）
+var _coin_icon: TextureRect         ## attract 页金币图标（ui_coin.png）
 
 
 func _ready() -> void:
@@ -66,14 +68,41 @@ func _ready() -> void:
 	_stats_holder.add_child(_stats_panel)
 	_stats_holder.visible = false
 
+	# attract 页素材：poster 标题图（顶部居中）+ 金币图标（提示语左侧）
+	var poster_tex := AssetLib.texture_or_null("res://assets/textures/poster.png")
+	if poster_tex:
+		_poster = TextureRect.new()
+		_poster.texture = poster_tex
+		_poster.expand_mode = TextureRect.EXPAND_IGNORE_SIZE  # 必须先于 size，否则 size 被最小尺寸钳回 1024
+		_poster.position = Vector2(780, 20)  # 顶部居中 360×360
+		_poster.size = Vector2(360, 360)
+		_poster.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_poster.visible = false
+		add_child(_poster)
+	var coin_tex := AssetLib.texture_or_null("res://assets/textures/ui_coin.png")
+	if coin_tex:
+		_coin_icon = TextureRect.new()
+		_coin_icon.texture = coin_tex
+		_coin_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE  # 同上：先于 size
+		_coin_icon.position = Vector2(640, 742)  # “当前币数”行左侧
+		_coin_icon.size = Vector2(48, 48)
+		_coin_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_coin_icon.visible = false
+		add_child(_coin_icon)
+
 
 # ---------- 各状态展示 ----------
 
-## 待机页：等投币
+## 待机页：等投币（有 poster.png 时上部显示标题图，文字下移）
 func show_attract(credits: int) -> void:
 	_hide_playing_ui()
-	_center_label.position.y = 380.0
 	_stats_holder.visible = false
+	if _poster:
+		_poster.visible = true
+	if _coin_icon:
+		_coin_icon.visible = true
+	_center_label.position.y = 500.0 if _poster else 380.0
+	_sub_label.position.y = 680.0 if _poster else 590.0
 	_center_label.modulate = Color.WHITE
 	_center_label.text = "ARC GUN"
 	_sub_label.text = "投币开始（手机发 COIN / 键盘 C），然后 START / 回车开打\n当前币数: %d" % credits
@@ -81,7 +110,12 @@ func show_attract(credits: int) -> void:
 
 func show_title(def: Dictionary) -> void:
 	_stats_holder.visible = false
+	if _poster:
+		_poster.visible = false
+	if _coin_icon:
+		_coin_icon.visible = false
 	_center_label.position.y = 380.0
+	_sub_label.position.y = 590.0
 	_center_label.modulate = Color.WHITE
 	_center_label.text = def.title
 	_sub_label.text = "目标 %d 分 / %.0f 秒" % [def.goal, def.duration]
