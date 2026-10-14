@@ -10,11 +10,11 @@
 
 ### 1.1 结论先行
 
-**推荐：Godot 4（用 4.6 稳定版，GDScript 标准版）。** 备选：Unity（仅限你已有 C#/Unity 经验的情况）。不推荐 Unreal。
+**推荐：Godot 4（用 4.7 稳定版，GDScript 标准版）。** 备选：Unity（仅限你已有 C#/Unity 经验的情况）。不推荐 Unreal。
 
 ### 1.2 三引擎对比
 
-| 维度 | Godot 4.6 | Unity 6 | Unreal Engine 5 |
+| 维度 | Godot 4.7 | Unity 6 | Unreal Engine 5 |
 |---|---|---|---|
 | 授权费 | **完全免费，MIT 开源，无分成、无收入上限、无强制登录** [已核实] | Personal 免费（年收入/融资 < 20 万美元）；超限必须买 Pro，2025 价 2,200 美元/席/年，2026 起涨至 2,310 美元 [已核实] | 免费使用，游戏总营收超 100 万美元后抽成 5% [已核实] |
 | 编辑器体积/启动 | 约 100 MB 单文件，秒开 [估计] | 数 GB，需 Unity Hub + 账号登录激活 | 数十 GB，需 Epic 账号 |
@@ -194,7 +194,7 @@ while udp.get_available_packet_count() > 0:
 
 | 工具 | 版本 | 价格/授权 | 国内访问 |
 |---|---|---|---|
-| Godot Engine | 4.6.3-stable（调研时最新维护版）[已核实] | 免费，MIT | 官网 godotengine.org 一般可直连 [估计]；慢则走 SourceForge 镜像、itch.io 或 Steam（国内教程推荐 SourceForge）[已核实有中文下载教程] |
+| Godot Engine | 4.7.2-stable（调研时最新维护版）[已核实] | 免费，MIT | 官网 godotengine.org 一般可直连 [估计]；慢则走 SourceForge 镜像、itch.io 或 Steam（国内教程推荐 SourceForge）[已核实有中文下载教程] |
 | Godot 中文文档 | 随版本 | 免费 | docs.godotengine.org/zh-cn 可直连 [估计] |
 | Unity | Unity 6 / 团结引擎 | Personal 免费（<$200K/年）；Pro $2,200/席/年（2026 起 $2,310）[已核实] | unity.cn 国内官网 + 团结 Hub 直连 [已核实]；注意国内渠道版本带 c1 后缀 |
 | Unreal Engine | UE5 | 免费；营收超 $1M 后 5% [已核实] | Epic 启动器/商城国内访问不稳定 [估计] |
@@ -208,7 +208,7 @@ while udp.get_available_packet_count() > 0:
 
 ## 七、建议的起步步骤（照做即可）
 
-1. SourceForge 或官网下载 Godot 4.6.3-stable 标准版（GDScript），解压即用，无需安装。
+1. SourceForge 或官网下载 Godot 4.7.2-stable 标准版（GDScript），解压即用，无需安装。
 2. 克隆 [lunarcloud/ggj-2024-rail-shooter](https://github.com/lunarcloud/ggj-2024-rail-shooter) 和 [crogersdev/rail_shooter_v1](https://github.com/crogersdev/rail_shooter_v1)，跑起来看 Path3D 用法。
 3. 建空项目，按顺序做：① Path3D+PathFollow3D 相机轨道 → ② InputProvider 接口 + 鼠标 Provider + 自绘准星 → ③ 屏幕空间命中判定（unproject_position + 像素距离）→ ④ 一个战斗段的 WaveResource + WaveManager → ⑤ PacketPeerUDP Provider + 手机端发坐标的最小程序 → ⑥ godottpd 或 WebSocket 接事件（或事件并入 UDP）。
 4. 全程用鼠标模式开发，UDP 枪最后接入——输入抽象做好后这只是加一个 Provider。
@@ -218,7 +218,7 @@ while udp.get_available_packet_count() > 0:
 ## 附：链接清单
 
 **引擎与定价**
-- Godot 下载归档：https://godotengine.org/download/archive/ ；4.6 stable：https://godotengine.org/download/archive/4.6-stable/
+- Godot 下载归档：https://godotengine.org/download/archive/ ；4.7 stable：https://godotengine.org/download/archive/4.7-stable/
 - Godot 中文文档：https://docs.godotengine.org/zh-cn/
 - Unity 定价页：https://unity.com/products ；定价更新说明：https://unity.com/products/pricing-updates ；取消 Runtime Fee 公告：https://unity.com/blog/unity-is-canceling-the-runtime-fee
 - Unity 中国/团结引擎：https://unity.cn/tuanjie/releases

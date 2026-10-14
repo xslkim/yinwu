@@ -47,6 +47,12 @@
 !/container/e2e-emulator.sh
 !/container/emulator-boot.png
 
+# 放行：自研光枪游戏（Godot 工程，排除引擎缓存与导出产物）
+!/game/
+!/game/**
+/game/.godot/
+/game/export/
+
 # 放行忽略规则本身
 !.gitignore
 

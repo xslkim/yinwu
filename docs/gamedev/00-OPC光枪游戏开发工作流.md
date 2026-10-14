@@ -15,7 +15,7 @@
 
 - **引擎：Godot 4（GDScript 标准版）**。MIT 免费无分成、离线可用、国内直连；.tscn/.gd 全文本，对 AI 编程最友好；Unity 有 Pro 授权费隐患，UE 过重。
 - **玩法结构：Point Blank 式"微关卡串烧"**——10 个左右 20-30 秒微关卡，每关只换一条规则（打靶/禁射人质/时限/连击），同一套瞄准机制规则换皮 = 一人团队最低成本的海量内容，且规则一句话能看懂，天然适配直播。
-- **输入抽象（第一天就写）**：`InputProvider` 接口，UDP 枪 / 鼠标 / 触屏 / 手柄四个实现，游戏逻辑只消费"屏幕坐标 + 事件信号"；UDP 收 `x,y` 坐标流 + shot/reload/coin/start 事件（并入 UDP，Godot 无内置 HTTP server）。
+- **输入抽象（第一天就写）**：`InputProvider` 接口，UDP 枪 / 鼠标 / 触屏 / 手柄四个实现，游戏逻辑只消费"屏幕坐标 + 事件信号"；游戏侧单端口 UDP 收 `x,y` 坐标流和 `SHOT`/`RELOAD`/`COIN`/`START` 文本事件包（并入 UDP，Godot 无内置 HTTP server）。**注意**：现有 tvgun 手机 App 的事件走 HTTP POST，需要在 App 里加一个"UDP 事件模式"小改动才能直连新游戏（在桥接器之前先改 App，工作量半天内）。
 - **命中判定**：屏幕空间距离判定为主（`unproject_position` 算像素距离，宽容度可调出街机手感）+ raycast 验遮挡。
 - **镜头**：`Path3D/PathFollow3D` 内置做轨道运镜。
 - **美术风格：低多边形 + 卡通渲染（toon shader + 描边 + Bloom）**——成本趋近于零、低端电视跑得动、直播惊艳靠高饱和配色+后处理+命中特效，不靠贴图精度。
