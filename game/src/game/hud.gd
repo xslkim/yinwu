@@ -10,7 +10,7 @@ var _combo_label: Label
 
 func _ready() -> void:
 	_score_label = _make_label(Vector2(40, 30), 48, HORIZONTAL_ALIGNMENT_LEFT)
-	_ammo_label = _make_label(Vector2(40, -90), 64, HORIZONTAL_ALIGNMENT_LEFT)
+	_ammo_label = _make_label(Vector2(40, -120), 64, HORIZONTAL_ALIGNMENT_LEFT)
 	_ammo_label.anchor_top = 1.0
 	_ammo_label.anchor_bottom = 1.0
 	_combo_label = _make_label(Vector2(-260, 30), 40, HORIZONTAL_ALIGNMENT_RIGHT)
@@ -42,5 +42,9 @@ func _make_label(offset: Vector2, font_size: int, align: HorizontalAlignment) ->
 	label.size = Vector2(400, font_size + 20)
 	label.horizontal_alignment = align
 	label.add_theme_font_size_override("font_size", font_size)
+	# 深色投影，保证亮底色上也可读
+	label.add_theme_color_override("font_shadow_color", Color(0.08, 0.08, 0.12))
+	label.add_theme_constant_override("shadow_offset_x", 3)
+	label.add_theme_constant_override("shadow_offset_y", 3)
 	add_child(label)
 	return label

@@ -2,6 +2,7 @@ class_name Crosshair
 extends Control
 
 ## 屏幕准星：跟随输入源的瞄准坐标；UDP 数据过期时变灰提示
+## 黑边白心双层设计，保证在任何背景色上都醒目
 ## 调试模式可画出命中判定圈（靶心处的宽容度半径）
 
 var aim := Vector2(960, 540)
@@ -16,12 +17,16 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	var color := Color.WHITE if fresh else Color(1, 1, 1, 0.3)
-	# 十字 + 外圈，直播画面里要醒目
-	draw_circle(aim, 10.0, color, false, 2.0)
-	draw_line(aim + Vector2(-16, 0), aim + Vector2(-5, 0), color, 2.0)
-	draw_line(aim + Vector2(5, 0), aim + Vector2(16, 0), color, 2.0)
-	draw_line(aim + Vector2(0, -16), aim + Vector2(0, -5), color, 2.0)
-	draw_line(aim + Vector2(0, 5), aim + Vector2(0, 16), color, 2.0)
+	var main_color := Color.WHITE if fresh else Color(1, 1, 1, 0.35)
+	var edge := Color(0.08, 0.08, 0.12, main_color.a)  # 与 3D 描边同色
+	# 外圈：先画粗黑边再叠白圈
+	draw_circle(aim, 14.0, edge, false, 5.0)
+	draw_circle(aim, 14.0, main_color, false, 2.5)
+	# 十字臂（黑边 + 白芯）
+	for dir in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+		draw_line(aim + dir * 8, aim + dir * 22, edge, 6.0)
+		draw_line(aim + dir * 8, aim + dir * 22, main_color, 3.0)
+	# 中心点
+	draw_circle(aim, 2.5, Color(1.0, 0.3, 0.2, main_color.a))
 	if show_hit_ring:
 		draw_circle(hit_ring_center, hit_ring_radius, Color(0.2, 1.0, 0.4, 0.5), false, 2.0)

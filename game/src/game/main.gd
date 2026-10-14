@@ -108,17 +108,18 @@ func _on_reload() -> void:
 	_audio.blip(660.0, 0.05, 0.25)
 
 
-## 从准星位置打一条射线，第一个命中物不是标靶就算被遮挡
+## 从准星位置打一条射线：只有"比标靶更近的遮挡物"才算挡住
+## （宽容度圈大于靶心碰撞球，射线常会擦过球体打中后面的墙，不能算遮挡）
 func _is_occluded(aim: Vector2) -> bool:
 	var from := _camera.project_ray_origin(aim)
 	var to := from + _camera.project_ray_normal(aim) * 100.0
 	var query := PhysicsRayQueryParameters3D.create(from, to)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if hit.is_empty():
-		return false  # 什么都没打到 → 无遮挡（屏幕距离判定已过关）
-	# 命中体属于标靶 → 无遮挡
-	return not (hit.collider as Node).is_ancestor_of(_target) \
-		and not _target.is_ancestor_of(hit.collider)
+		return false
+	var target_dist := from.distance_to(_target.bullseye_position())
+	# 命中点在靶心前方 0.8m 以内才算真遮挡（0.8 ≈ 碰撞球半径 + 余量）
+	return from.distance_to(hit.position) < target_dist - 0.8
 
 
 # ---------- 命中反馈三件套 ----------
@@ -147,8 +148,10 @@ func _spawn_hit_feedback(aim: Vector2, gained: int) -> void:
 
 	var label := Label3D.new()
 	label.text = "+%d" % gained
-	label.font_size = 96
+	label.font_size = 200
+	label.outline_size = 24
 	label.modulate = Color(1.0, 0.9, 0.2)
+	label.outline_modulate = Color(0.08, 0.08, 0.12)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.global_position = pos + Vector3(0, 0.3, 0)
 	add_child(label)
@@ -168,52 +171,73 @@ func _toggle_fullscreen() -> void:
 # ---------- 场景搭建（程序化，零素材） ----------
 
 func _build_world() -> void:
-	# 环境光 + 纯色天光背景
+	# 环境光 + 高饱和天蓝背景（卡通基调）
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
-	e.background_color = Color(0.35, 0.5, 0.7)  # 卡通天蓝
+	e.background_color = Color(0.45, 0.78, 0.95)
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.9, 0.9, 0.95)
-	e.ambient_light_energy = 0.6
+	e.ambient_light_color = Color.WHITE
+	e.ambient_light_energy = 0.45
 	env.environment = e
 	add_child(env)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, -30, 0)
-	sun.light_energy = 1.2
+	sun.light_energy = 0.9
+	sun.shadow_enabled = true  # 有阴影才有立体感
 	add_child(sun)
 
-	# 固定机位：稍微俯视靶场
+	# 固定机位：压低视角贴近靶场，减少空旷地面占比
 	_camera = Camera3D.new()
-	_camera.position = Vector3(0, 2.5, 9)
-	_camera.rotation_degrees = Vector3(-10, 0, 0)
+	_camera.position = Vector3(0, 2.4, 7.5)
+	_camera.rotation_degrees = Vector3(-11, 0, 0)
 	add_child(_camera)
 
-	# 地面（卡通绿）
+	# 地面（深卡通绿）
 	var ground := MeshInstance3D.new()
 	var ground_mesh := PlaneMesh.new()
 	ground_mesh.size = Vector2(40, 30)
 	ground.mesh = ground_mesh
-	ground.material_override = _flat(Color(0.35, 0.7, 0.35))
+	ground.material_override = _flat(Color(0.18, 0.5, 0.22))
 	add_child(ground)
 	_add_collider(ground, Vector3(40, 0.2, 30), Vector3(0, -0.1, 0))
 
-	# 背景板（靶场后墙，暖橙色衬托标靶）
+	# 靶道色带：浅绿条带标示射击区，把视线引向标靶
+	var lane := MeshInstance3D.new()
+	var lane_mesh := PlaneMesh.new()
+	lane_mesh.size = Vector2(16, 30)
+	lane.mesh = lane_mesh
+	lane.position = Vector3(0, 0.02, 0)
+	lane.material_override = _flat(Color(0.38, 0.68, 0.28))
+	add_child(lane)
+
+	# 背景板（矮墙不抢戏：暖橙墙 + 顶部深红压边）
 	var wall := MeshInstance3D.new()
 	var wall_mesh := BoxMesh.new()
-	wall_mesh.size = Vector3(40, 12, 0.5)
+	wall_mesh.size = Vector3(40, 6, 0.5)
 	wall.mesh = wall_mesh
-	wall.position = Vector3(0, 6, -10)
-	wall.material_override = _flat(Color(0.95, 0.6, 0.3))
+	wall.position = Vector3(0, 3, -10)
+	wall.material_override = _flat(Color(0.9, 0.45, 0.15))
 	add_child(wall)
-	_add_collider(wall, Vector3(40, 12, 0.5), Vector3.ZERO)
+	_add_collider(wall, Vector3(40, 6, 0.5), Vector3.ZERO)
+	var trim := MeshInstance3D.new()
+	var trim_mesh := BoxMesh.new()
+	trim_mesh.size = Vector3(40, 0.6, 0.7)
+	trim.mesh = trim_mesh
+	trim.position = Vector3(0, 6.1, -10)
+	trim.material_override = _flat(Color(0.6, 0.18, 0.12))
+	add_child(trim)
 
-	# 几何装饰：两侧几个低多边形盒子/圆柱，丰富画面层次
-	_add_deco_box(Vector3(-7, 0.8, -4), Color(0.8, 0.3, 0.5))
-	_add_deco_box(Vector3(7.5, 0.6, -5), Color(0.3, 0.6, 0.9))
-	_add_deco_cylinder(Vector3(-5.5, 1.2, -8), Color(0.9, 0.75, 0.2))
-	_add_deco_cylinder(Vector3(6, 1.0, -8.5), Color(0.5, 0.35, 0.7))
+	# 远山剪影：两侧大圆锥，深青色压出层次
+	_add_deco_cone(Vector3(-14, 0, -9), 5.0, 6.0, Color(0.12, 0.32, 0.38))
+	_add_deco_cone(Vector3(14, 0, -9), 6.0, 7.5, Color(0.1, 0.28, 0.35))
+
+	# 几何装饰：两侧低多边形盒子/圆柱，全部带描边
+	_add_deco_box(Vector3(-7, 0.8, -4), Color(0.85, 0.3, 0.5))
+	_add_deco_box(Vector3(7.5, 0.6, -5), Color(0.3, 0.6, 0.95))
+	_add_deco_cylinder(Vector3(-5.5, 1.2, -8), Color(0.95, 0.75, 0.2))
+	_add_deco_cylinder(Vector3(6, 1.0, -8.5), Color(0.55, 0.35, 0.75))
 
 
 func _build_target() -> void:
@@ -231,25 +255,29 @@ func _build_effects() -> void:
 	_flash_light.omni_range = 12.0
 	add_child(_flash_light)
 
-	# 命中粒子：一次性迸发的小方块，卡通配色
+	# 命中粒子：一次性迸发的大颗粒亮块，远机位也要看得见
 	_particles = GPUParticles3D.new()
-	_particles.amount = 24
-	_particles.lifetime = 0.5
+	_particles.amount = 40
+	_particles.lifetime = 0.7
 	_particles.one_shot = true
 	_particles.explosiveness = 1.0
 	_particles.emitting = false
 	var pm := ParticleProcessMaterial.new()
 	pm.direction = Vector3(0, 1, 0)
-	pm.spread = 60.0
-	pm.initial_velocity_min = 3.0
-	pm.initial_velocity_max = 7.0
+	pm.spread = 70.0
+	pm.initial_velocity_min = 4.0
+	pm.initial_velocity_max = 9.0
 	pm.gravity = Vector3(0, -9.8, 0)
-	pm.scale_min = 0.05
-	pm.scale_max = 0.15
+	pm.scale_min = 0.12
+	pm.scale_max = 0.28
 	pm.color = Color(1.0, 0.85, 0.2)
 	_particles.process_material = pm
 	var quad := BoxMesh.new()
-	quad.size = Vector3(0.1, 0.1, 0.1)
+	quad.size = Vector3(0.16, 0.16, 0.16)
+	var quad_mat := StandardMaterial3D.new()
+	quad_mat.albedo_color = Color(1.0, 0.85, 0.2)
+	quad_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED  # 自发光感
+	quad.material = quad_mat
 	_particles.draw_pass_1 = quad
 	add_child(_particles)
 
@@ -300,6 +328,7 @@ func _add_deco_box(pos: Vector3, color: Color) -> void:
 	m.rotation_degrees.y = randf_range(0, 45)
 	m.material_override = _flat(color)
 	add_child(m)
+	_add_outline(m)
 
 
 func _add_deco_cylinder(pos: Vector3, color: Color) -> void:
@@ -313,3 +342,31 @@ func _add_deco_cylinder(pos: Vector3, color: Color) -> void:
 	m.position = pos
 	m.material_override = _flat(color)
 	add_child(m)
+	_add_outline(m)
+
+
+func _add_deco_cone(pos: Vector3, radius: float, height: float, color: Color) -> void:
+	var m := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.0
+	mesh.bottom_radius = radius
+	mesh.height = height
+	mesh.radial_segments = 6  # 大棱锥剪影
+	m.mesh = mesh
+	m.position = pos + Vector3(0, height * 0.5, 0)
+	m.material_override = _flat(color)
+	add_child(m)
+
+
+## 卡通描边：inverted-hull 法（同一 mesh 背面剔除 + 沿法线外扩 + 黑色无光照）
+func _add_outline(mi: MeshInstance3D, thickness := 0.04) -> void:
+	var shell := MeshInstance3D.new()
+	shell.mesh = mi.mesh
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.08, 0.08, 0.12)  # 近黑的深蓝，比纯黑柔和
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_FRONT
+	mat.grow_enabled = true
+	mat.grow_amount = thickness
+	shell.material_override = mat
+	mi.add_child(shell)
