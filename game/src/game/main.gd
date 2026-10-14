@@ -405,8 +405,8 @@ func _spawn_score_label(aim: Vector2, text: String, color: Color, target: Target
 	label.modulate = color
 	label.outline_modulate = Color(0.08, 0.08, 0.12)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.global_position = pos + Vector3(0, 0.3, 0)
 	add_child(label)
+	label.global_position = pos + Vector3(0, 0.3, 0)  # 入树后再设全局坐标（之前顺序会丢位置且报引擎告警）
 	var tween := create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(label, "global_position:y", pos.y + 1.5, 0.6)
@@ -423,8 +423,8 @@ func _spawn_combo_label(combo: int) -> void:
 	label.modulate = Color(1.0, 0.8, 0.1)
 	label.outline_modulate = Color(0.08, 0.08, 0.12)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.global_position = Vector3(0, 4.2, -6)
 	add_child(label)
+	label.global_position = Vector3(0, 4.2, -6)  # 同上：入树后再设
 	var tween := create_tween()
 	# 先弹一下再大化淡出
 	tween.tween_property(label, "scale", Vector3.ONE * 1.3, 0.12).set_trans(Tween.TRANS_BACK)
