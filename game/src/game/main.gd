@@ -1,22 +1,25 @@
 extends Node3D
 
-## ArcGun 主场景：Week 2 垂直切片
-##   程序化低多边形场景（地面/背景板/几何装饰，纯色卡通 + inverted-hull 描边）
-##   微关卡串烧：attract → 标题闪现 → 倒计时开打 → 单关结算 → 总结算页
-##   多靶系统：波次表驱动生成器，普通/人质/金靶三型
+## ArcGun 主场景：Week 3 完整玩法
+##   程序化低多边形场景（纯色卡通 + inverted-hull 描边，贴图接口已留好）
+##   6 个微关卡串烧：attract →(30s 无投币)→ demo 演示 → 标题闪现 → 倒计时开打 → 结算
+##   多靶系统：普通/人质/金靶三型，逃靶惩罚（L4 起），连击里程碑跳字
 ## 输入纪律：本脚本只通过 InputProvider 接口拿输入，绝不直接摸 Input 单例
-##   唯一例外：F1/F2/F9/F11 调试热键属于"系统层"，不算游戏逻辑
+##   唯一例外：F1/F2/F3/F9/F11 调试热键属于"系统层"，不算游戏逻辑
 ## 启动参数：`-- --udp` UDP 光枪源；`--freeze-target` 定量联调（钉死单靶）；
 ##   `--auto-shots` 每 60 帧自截屏到 D:/yinwu/temp/arcgun-shots/auto/（锁屏也能验收画面）
 
 @export var hit_tolerance := 60.0  ## 命中宽容度（准星到靶心的屏幕像素距离）
+
+const CAM_HOME_POS := Vector3(0, 2.4, 7.5)
+const CAM_HOME_ROT := Vector3(-11, 0, 0)
 
 var _camera: Camera3D
 var _crosshair: Crosshair
 var _hud: Hud
 var _level_ui: LevelUi
 var _overlay: DebugOverlay
-var _audio: PlaceholderAudio
+var _audio: AudioManager
 var _flash_light: OmniLight3D
 var _particles: GPUParticles3D
 var _spawner: TargetSpawner
@@ -25,18 +28,23 @@ var _provider: InputProvider
 var _score := ScoreKeeper.new()
 var _ammo := AmmoManager.new()
 var _levels: LevelManager
+var _settings := SettingsManager.new()
 var _show_hit_ring := false
 var _hitstop_active := false  ## 顿帧防重入
 var _freeze_target: Target    ## 定量联调模式下的钉死靶
 var _freeze_report := false
 var _auto_shots := false    ## 自截屏验收模式
 var _shot_frame := 0
+var _demo_angle := 0.0      ## attract 演示的相机环绕角度
 
 
 func _ready() -> void:
 	_build_world()
 	_build_effects()
 	_build_ui()
+	# 设置：加载音量并应用（F3 循环主音量档）
+	_settings.load_settings()
+	_audio.set_volumes(_settings.volumes.master, _settings.volumes.music, _settings.volumes.sfx)
 	var args := OS.get_cmdline_user_args()
 	if "--freeze-target" in args:
 		# 定量联调：不走关卡流程，场上只有一个永不缩回的固定靶
@@ -61,8 +69,8 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	# 定量联调：退出时打一行统计（headless 跑命中率用）
 	var total := _score.hits + _score.misses
-	print("[Stats] shots=%d hits=%d accuracy=%.2f score=%d" % [
-		total, _score.hits, _score.accuracy(), _score.score])
+	print("[Stats] shots=%d hits=%d escapes=%d accuracy=%.2f score=%d" % [
+		total, _score.hits, _score.escapes, _score.accuracy(), _score.score])
 
 
 func _process(delta: float) -> void:
@@ -75,6 +83,11 @@ func _process(delta: float) -> void:
 		if _levels.state == "playing":
 			_spawner.tick(delta)
 			_level_ui.update_timer(_levels.time_ratio())
+			# 残局 25% 时间切紧张 BGM
+			if _levels.time_ratio() < 0.25:
+				_audio.play_bgm("intense")
+		elif _levels.state == "demo":
+			_tick_demo(delta)
 	_crosshair.aim = _provider.get_aim()
 	_crosshair.fresh = _provider.is_aim_fresh()
 	_crosshair.show_hit_ring = _show_hit_ring
@@ -100,8 +113,35 @@ func _unhandled_input(event: InputEvent) -> void:
 		match event.keycode:
 			KEY_F1: _overlay.visible = not _overlay.visible
 			KEY_F2: _show_hit_ring = not _show_hit_ring
+			KEY_F3: _cycle_volume()
 			KEY_F9: _switch_provider(_provider is MouseGunProvider)
 			KEY_F11: _toggle_fullscreen()
+
+
+## F3：主音量循环降档（100%→70%→40%→静音），持久化到 user://settings.cfg
+func _cycle_volume() -> void:
+	var v := _settings.cycle_master()
+	_audio.set_volumes(v, _settings.volumes.music, _settings.volumes.sfx)
+	print("[Main] 主音量 → %d%%" % int(v * 100))
+
+
+# ---------- attract 演示模式 ----------
+
+## demo 状态：相机缓慢环绕靶场 + 靶子自动弹出缩回（不开枪）
+func _tick_demo(delta: float) -> void:
+	_demo_angle += delta * 0.25
+	var center := Vector3(0, 3.2, -2.0)
+	_camera.position = center + Vector3(sin(_demo_angle), 0, cos(_demo_angle)) * 10.5
+	_camera.look_at(Vector3(0, 1.5, -5), Vector3.UP)
+	_spawner.tick(delta)
+	if _spawner.demo_finished():
+		_spawner.start_level(LevelDefs.demo())  # 循环播放
+
+
+func _exit_demo() -> void:
+	_spawner.stop()
+	_camera.position = CAM_HOME_POS
+	_camera.rotation_degrees = CAM_HOME_ROT
 
 
 # ---------- 关卡流程接线 ----------
@@ -109,33 +149,64 @@ func _unhandled_input(event: InputEvent) -> void:
 func _build_level_flow() -> void:
 	_spawner = TargetSpawner.new()
 	add_child(_spawner)
+	_spawner.target_escaped.connect(_on_target_escaped)
 	_levels = LevelManager.new(LevelDefs.all(), _score)
-	# 调试跳关：`--level 2` 直接从中途开打（验收人质/金靶用）
+	# 调试跳关：`--level=N` 直接从中途开打（验收人质/金靶用）
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--level="):
-			_levels.start_at = clampi(int(a.trim_prefix("--level=")) - 1, 0, 2)
+			_levels.start_at = clampi(int(a.trim_prefix("--level=")) - 1, 0, 5)
 	_levels.level_title_shown.connect(func(_i, def): _level_ui.show_title(def))
 	_levels.level_started.connect(_on_level_started)
 	_levels.level_finished.connect(_on_level_finished)
 	_levels.game_finished.connect(_on_game_finished)
+	_levels.state_changed.connect(_on_state_changed)
 	_level_ui.show_attract(_levels.credits)
+	_audio.play_bgm("menu")
 
 
-func _on_level_started(_idx: int, def: Dictionary) -> void:
+func _on_state_changed(state: String) -> void:
+	match state:
+		"demo":
+			_level_ui.show_attract(_levels.credits)
+			_spawner.start_level(LevelDefs.demo())
+		"attract":
+			_exit_demo()
+			_level_ui.show_attract(_levels.credits)
+			_audio.play_bgm("menu")
+
+
+func _on_level_started(idx: int, def: Dictionary) -> void:
 	_level_ui.show_playing(def)
 	_spawner.start_level(def)
 	_ammo.reload()  # 街机惯例：每关开始满弹
 	_hud.set_ammo(_ammo.current, _ammo.capacity)
+	_audio.play_bgm("intense" if idx >= 4 else "play")  # L5/L6 直接上紧张轨
 
 
 func _on_level_finished(_idx: int, passed: bool, level_score: int) -> void:
 	_spawner.stop()
 	_level_ui.show_level_result(passed, level_score, _levels.current_level().goal)
-	_audio.blip(660.0 if passed else 180.0, 0.2, 0.3)
+	_audio.play("level_pass" if passed else "level_fail")
 
 
 func _on_game_finished(win: bool) -> void:
 	_level_ui.show_gameover(win, _score)
+	_audio.play("win" if win else "lose")
+	_audio.play_bgm("menu")
+
+
+## 逃靶：dwell 超时溜走。L4 起扣分断连击（关卡表 escape_penalty 控制）
+func _on_target_escaped(t: Target) -> void:
+	if _levels == null or _levels.state != "playing":
+		return
+	if not _levels.current_level().get("escape_penalty", false):
+		return
+	_score.register_escape()
+	_hud.set_score(_score.score)
+	_hud.set_combo(0)
+	_spawn_score_label(_camera.unproject_position(t.bullseye_position()),
+		"-%d 逃靶" % ScoreKeeper.ESCAPE_PENALTY, Color(1.0, 0.5, 0.2))
+	_audio.play("escape")
 
 
 # ---------- 输入源管理 ----------
@@ -159,8 +230,8 @@ func _switch_provider(use_udp: bool) -> void:
 func _on_coin() -> void:
 	if _levels == null:
 		return
-	_levels.insert_coin()
-	_audio.blip(990.0, 0.1, 0.3)
+	_levels.insert_coin()  # demo 状态会被打断回 attract（state_changed 里收拾相机/靶场）
+	_audio.play("coin")
 	if _levels.state == "attract":
 		_level_ui.show_attract(_levels.credits)
 
@@ -169,9 +240,9 @@ func _on_start() -> void:
 	if _levels == null:
 		return
 	if _levels.press_start():
-		_audio.blip(1320.0, 0.12, 0.3)
+		_audio.play("start")
 	else:
-		_audio.blip(160.0, 0.09, 0.3)  # 没币/没到时候的低哑提示
+		_audio.play("empty")  # 没币/没到时候的低哑提示
 
 
 func _on_exit() -> void:
@@ -181,9 +252,7 @@ func _on_exit() -> void:
 		get_tree().quit()  # 待机页再按退出 = 退出进程（电视端遥控器场景）
 		return
 	if _levels.abort():
-		_spawner.stop()
-		_level_ui.show_attract(_levels.credits)
-		_audio.blip(160.0, 0.09, 0.3)
+		_audio.play("empty")
 
 
 # ---------- 核心射击循环 ----------
@@ -194,11 +263,11 @@ func _on_shot() -> void:
 	if not in_play:
 		return
 	if not _ammo.consume():
-		_audio.blip(160.0, 0.09, 0.3)  # 空仓低哑声
+		_audio.play("empty")
 		_hud.set_ammo(0, _ammo.capacity)
 		return
 	_hud.set_ammo(_ammo.current, _ammo.capacity)
-	_audio.blip(880.0, 0.06, 0.3)
+	_audio.play("shot")
 	_flash_muzzle()
 
 	var aim := _provider.get_aim()
@@ -209,13 +278,17 @@ func _on_shot() -> void:
 			_hud.set_score(_score.score)
 			_hud.set_combo(0)
 			_spawn_score_label(aim, "-%d" % ScoreKeeper.HOSTAGE_PENALTY, Color(1.0, 0.3, 0.25))
-			_audio.blip(140.0, 0.15, 0.35)  # 误伤低沉闷响
+			_audio.play("hostage")
 		else:
 			var gained := _score.register_hit(target.base_points)
 			_hud.set_score(_score.score)
 			_hud.set_combo(_score.combo)
 			_spawn_hit_feedback(aim, target, gained)
 			_hitstop()
+			# 连击里程碑（×5/×10/×15…）：大号金色跳字 + 专属音效
+			if ScoreKeeper.is_combo_milestone(_score.combo):
+				_spawn_combo_label(_score.combo)
+				_audio.play("combo")
 		# 联调钉死靶打不烂（要反复测命中率）；正常靶命中即销毁
 		if target != _freeze_target:
 			target.destroy_with_hit()
@@ -227,8 +300,7 @@ func _on_shot() -> void:
 func _on_reload() -> void:
 	_ammo.reload()
 	_hud.set_ammo(_ammo.current, _ammo.capacity)
-	_audio.blip(440.0, 0.05, 0.25)
-	_audio.blip(660.0, 0.05, 0.25)
+	_audio.play("reload")
 
 
 ## 屏幕上离准星最近且在宽容度内的可打标靶；没有则 null
@@ -315,6 +387,25 @@ func _spawn_score_label(aim: Vector2, text: String, color: Color, target: Target
 	tween.chain().tween_callback(label.queue_free)
 
 
+## 连击里程碑跳字：屏幕中上方大号金色（与命中跳分拉开层级）
+func _spawn_combo_label(combo: int) -> void:
+	var label := Label3D.new()
+	label.text = "COMBO ×%d!" % combo
+	label.font_size = 320
+	label.outline_size = 36
+	label.modulate = Color(1.0, 0.8, 0.1)
+	label.outline_modulate = Color(0.08, 0.08, 0.12)
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.global_position = Vector3(0, 4.2, -6)
+	add_child(label)
+	var tween := create_tween()
+	# 先弹一下再大化淡出
+	tween.tween_property(label, "scale", Vector3.ONE * 1.3, 0.12).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(label, "scale", Vector3.ONE, 0.15)
+	tween.tween_property(label, "modulate:a", 0.0, 0.4)
+	tween.tween_callback(label.queue_free)
+
+
 func _toggle_fullscreen() -> void:
 	var win := get_window()
 	win.mode = Window.MODE_FULLSCREEN \
@@ -324,11 +415,21 @@ func _toggle_fullscreen() -> void:
 # ---------- 场景搭建（程序化，零素材） ----------
 
 func _build_world() -> void:
-	# 环境光 + 高饱和天蓝背景（卡通基调）
+	# 环境光 + 高饱和天蓝背景（卡通基调）；sky.png 存在则用贴图天空
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
-	e.background_mode = Environment.BG_COLOR
-	e.background_color = Color(0.45, 0.78, 0.95)
+	var sky_tex := AssetLib.texture_or_null("res://assets/textures/sky.png")
+	if sky_tex:
+		# Godot 4 没有 BG_TEXTURE：贴图天空走 Sky + PanoramaSkyMaterial
+		var sky := Sky.new()
+		var sky_mat := PanoramaSkyMaterial.new()
+		sky_mat.panorama = sky_tex
+		sky.sky_material = sky_mat
+		e.background_mode = Environment.BG_SKY
+		e.sky = sky
+	else:
+		e.background_mode = Environment.BG_COLOR
+		e.background_color = Color(0.45, 0.78, 0.95)
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	e.ambient_light_color = Color.WHITE
 	e.ambient_light_energy = 0.45
@@ -347,12 +448,18 @@ func _build_world() -> void:
 	_camera.rotation_degrees = Vector3(-11, 0, 0)
 	add_child(_camera)
 
-	# 地面（深卡通绿）
+	# 地面（深卡通绿）；ground.png 存在则用贴图
 	var ground := MeshInstance3D.new()
 	var ground_mesh := PlaneMesh.new()
 	ground_mesh.size = Vector2(40, 30)
 	ground.mesh = ground_mesh
-	ground.material_override = _flat(Color(0.18, 0.5, 0.22))
+	var ground_mat := _flat(Color(0.18, 0.5, 0.22))
+	var ground_tex := AssetLib.texture_or_null("res://assets/textures/ground.png")
+	if ground_tex:
+		ground_mat.albedo_texture = ground_tex
+		ground_mat.albedo_color = Color.WHITE
+		ground_mat.uv1_scale = Vector3(6, 6, 1)  # 平铺贴图
+	ground.material_override = ground_mat
 	add_child(ground)
 	_add_collider(ground, Vector3(40, 0.2, 30), Vector3(0, -0.1, 0))
 
@@ -428,7 +535,7 @@ func _build_effects() -> void:
 	_particles.draw_pass_1 = quad
 	add_child(_particles)
 
-	_audio = PlaceholderAudio.new()
+	_audio = AudioManager.new()
 	add_child(_audio)
 
 

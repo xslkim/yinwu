@@ -11,6 +11,9 @@ const Ammo = preload("res://src/core/ammo_manager.gd")
 const Levels = preload("res://src/core/level_defs.gd")
 const LevelMgr = preload("res://src/core/level_manager.gd")
 const Scheduler = preload("res://src/core/wave_scheduler.gd")
+const Assets = preload("res://src/core/asset_lib.gd")
+const Settings = preload("res://src/core/settings_manager.gd")
+const AudioMgr = preload("res://src/game/audio_manager.gd")
 
 var _pass := 0
 var _fail := 0
@@ -23,8 +26,12 @@ func _init() -> void:
 	_test_score()
 	_test_ammo()
 	_test_level_defs()
+	_test_escape_and_combo()
 	_test_level_flow()
 	_test_wave_scheduler()
+	_test_asset_lib()
+	_test_audio_fallback()
+	_test_settings()
 	print("== 结果: 通过 %d / 失败 %d ==" % [_pass, _fail])
 	quit(1 if _fail > 0 else 0)
 
@@ -185,21 +192,67 @@ func _test_ammo() -> void:
 
 func _test_level_defs() -> void:
 	var levels := Levels.all()
-	_assert(levels.size() == 3, "应有 3 个微关卡")
-	for lv in levels:
-		_assert(lv.duration >= 15.0 and lv.duration <= 30.0, "每关 20-30 秒量级: %s" % lv.title)
-		_assert(lv.goal > 0, "每关要有关卡目标分")
-		_assert(lv.waves.size() > 0, "每关要有波次")
+	_assert(levels.size() == 6, "应有 6 个微关卡")
+	var total := 0.0
+	var prev_goal := 0
+	var prev_mult := 0.0
+	for i in levels.size():
+		var lv: Dictionary = levels[i]
+		_assert(lv.duration >= 20.0 and lv.duration <= 30.0, "每关 20-30 秒: %s" % lv.title)
+		_assert(lv.goal > prev_goal, "目标分应递增: %s（%d <= 上一关 %d）" % [lv.title, lv.goal, prev_goal])
+		prev_goal = lv.goal
+		_assert(lv.get("speed_mult", 1.0) >= prev_mult, "靶速倍率应不减: %s" % lv.title)
+		prev_mult = lv.get("speed_mult", 1.0)
+		total += lv.duration
 		var prev_t := -1.0
 		for w in lv.waves:
-			_assert(w.t > prev_t, "波次按时间升序: %s" % lv.title)
+			_assert(w.t >= prev_t, "波次按时间不减序（金靶允许同刻双出）: %s" % lv.title)
 			prev_t = w.t
 			_assert(w.type in ["normal", "hostage", "gold"], "合法靶型: %s" % w.type)
 			_assert(w.t < lv.duration, "波次要出在关卡时限内: %s t=%.1f" % [lv.title, w.t])
-	# 各关特色：1 全固定、2 含人质、3 含金靶
-	_assert(levels[0].waves.all(func(w): return w.speed == 0.0), "关卡 1 全部固定靶")
-	_assert(levels[1].waves.any(func(w): return w.type == "hostage"), "关卡 2 要有人质")
-	_assert(levels[2].waves.any(func(w): return w.type == "gold"), "关卡 3 要有金靶")
+	_assert(total >= 140.0 and total <= 200.0, "一局总时长 3-4 分钟量级（开打 %.0fs + 过场）" % total)
+	# 递进结构断言
+	_assert(levels[0].waves.all(func(w): return w.speed == 0.0), "L1 全部固定靶（教学关）")
+	_assert(not levels[0].escape_penalty and not levels[1].escape_penalty and not levels[2].escape_penalty,
+		"L1-L3 学习期无逃靶惩罚")
+	_assert(levels[3].escape_penalty, "L4 引入逃靶惩罚")
+	_assert(levels[2].waves.any(func(w): return w.type == "hostage"), "L3 要有人质")
+	_assert(levels[3].waves.any(func(w): return w.type == "gold"), "L4 要有金靶")
+	_assert(is_equal_approx(levels[4].speed_mult, 1.3), "L5 靶速 ×1.3")
+	_assert(is_equal_approx(levels[5].speed_mult, 1.5), "L6 靶速 ×1.5")
+	# L6 金靶双出：存在同一时刻两个金靶
+	var l6: Dictionary = levels[5]
+	var gold_times := {}
+	for w in l6.waves:
+		if w.type == "gold":
+			gold_times[w.t] = gold_times.get(w.t, 0) + 1
+	_assert(gold_times.values().any(func(n): return n >= 2), "L6 金靶要成对双出")
+	# demo 波次表合法性
+	var d := Levels.demo()
+	_assert(d.waves.size() >= 8 and not d.escape_penalty, "demo 波次循环播放且无惩罚")
+
+
+# ---------- 逃靶 / 连击里程碑 ----------
+
+func _test_escape_and_combo() -> void:
+	var s := Score.new()
+	s.register_hit(); s.register_hit()  # 300 分 2 连击
+	s.register_escape()
+	_assert(s.score == 250 and s.combo == 0 and s.escapes == 1, "逃靶 -50 断连击")
+	s.register_escape()
+	s.register_escape()
+	s.register_escape()
+	s.register_escape()
+	s.register_escape()  # 再逃 5 次共 -250，触底 0
+	_assert(s.score == 0 and s.escapes == 6, "逃靶扣分下限 0")
+	s.reset()
+	_assert(s.escapes == 0, "reset 清逃靶计数")
+
+	# 连击里程碑：5/10/15 触发，其余不触发
+	for c in [5, 10, 15, 20]:
+		_assert(Score.is_combo_milestone(c), "×%d 应是里程碑" % c)
+	for c in [0, 1, 4, 6, 9, 11, 14]:
+		_assert(not Score.is_combo_milestone(c), "×%d 不应是里程碑" % c)
 
 
 # ---------- 关卡流转 ----------
@@ -270,6 +323,18 @@ func _test_level_flow() -> void:
 	_assert(m.state == "gameover", "3 关过完进总结算")
 	_assert(win_result[0], "全通关 win=true")
 
+	# attract 演示模式：30s 无投币自动进 demo，投币打断回待机页
+	s = Score.new()
+	m = LevelMgr.new(_mini_levels(), s)
+	m.tick(LevelMgr.DEMO_AFTER * 0.5)
+	_assert(m.state == "attract", "未到 30s 保持待机")
+	m.tick(LevelMgr.DEMO_AFTER * 0.6)
+	_assert(m.state == "demo", "30s 无投币进演示")
+	_assert(not m.press_start(), "demo 中无币不能开打")
+	m.insert_coin()
+	_assert(m.state == "attract", "投币打断演示回待机页")
+	_assert(m.press_start(), "打断后可正常开打")
+
 	# EXIT：进行中退出 → 回待机页；待机页退出 → false（由场景层退出进程）
 	s = Score.new()
 	m = LevelMgr.new(_mini_levels(), s)
@@ -298,3 +363,94 @@ func _test_wave_scheduler() -> void:
 	_assert(due[0].type == "gold" and due[1].type == "hostage", "同时刻保持表内顺序")
 	_assert(sc.exhausted(), "全部派完")
 	_assert(sc.poll(99.0).is_empty(), "派完后不再出")
+
+
+# ---------- AssetLib fallback ----------
+
+func _test_asset_lib() -> void:
+	# 用 user:// 下的临时目录模拟素材目录（不碰 res://assets/）
+	var dir := "user://test_assets"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
+
+	# 空目录 → 无变体，走 fallback
+	_assert(Assets.variants(dir, "shot", ["wav"]).is_empty(), "空目录无变体")
+	_assert(Assets.pick_variant(dir, "shot", ["wav"]) == "", "空目录 pick 返回空串")
+	_assert(Assets.texture_or_null(dir + "/nope.png") == null, "缺失贴图返回 null")
+
+	# 有本体 + 编号变体 → 全部找到
+	for f in ["shot.wav", "shot_2.wav", "shot_3.wav"]:
+		var h := FileAccess.open("%s/%s" % [dir, f], FileAccess.WRITE)
+		h.store_string("fake")
+		h.close()
+	_assert(Assets.variants(dir, "shot", ["wav"]).size() == 3, "本体+2变体=3（实际 %d）" % Assets.variants(dir, "shot", ["wav"]).size())
+	_assert(Assets.pick_variant(dir, "shot", ["wav"]) != "", "有变体时 pick 非空")
+	# 编号断档不影响已存在的变体；不存在的名字仍空
+	_assert(Assets.variants(dir, "reload", ["wav"]).is_empty(), "别的名字不受影响")
+
+	# 贴图：生成一张真 PNG 能加载，垃圾文件返回 null
+	var img := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	img.fill(Color.RED)
+	img.save_png(dir + "/red.png")
+	_assert(Assets.texture_or_null(dir + "/red.png") != null, "真 PNG 应能加载")
+	var h := FileAccess.open(dir + "/bad.png", FileAccess.WRITE)
+	h.store_string("not a png")
+	h.close()
+	_assert(Assets.texture_or_null(dir + "/bad.png") == null, "垃圾文件返回 null")
+
+	for f in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir + "/" + f)
+	DirAccess.remove_absolute(dir)
+
+
+# ---------- AudioManager fallback ----------
+
+func _test_audio_fallback() -> void:
+	var am := AudioMgr.new()  # 不进树：_ready 不跑，纯测路径解析
+	am.audio_dir = "user://definitely_not_exists"
+	_assert(am.resolve_clip("shot") == "", "素材缺失时音效解析为空（走合成 fallback）")
+	_assert(am.resolve_bgm("menu") == "", "素材缺失时 BGM 解析为空（静音）")
+	_assert(AudioMgr.SYNTH.has("shot") and AudioMgr.SYNTH.has("escape")
+		and AudioMgr.SYNTH.has("combo"), "fallback 合成表覆盖关键音效")
+	# headless 下 play/play_bgm/blip 必须安全无操作不崩溃
+	am.play("shot")
+	am.play_bgm("play")
+	am.blip()
+	am.free()
+	# 有素材时解析出变体
+	var dir := "user://test_audio"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
+	var h := FileAccess.open(dir + "/shot.wav", FileAccess.WRITE)
+	h.store_string("fake wav")
+	h.close()
+	var am2 := AudioMgr.new()
+	am2.audio_dir = dir
+	_assert(am2.resolve_clip("shot").ends_with("shot.wav"), "素材存在时解析到 WAV")
+	am2.free()
+	DirAccess.remove_absolute(dir + "/shot.wav")
+	DirAccess.remove_absolute(dir)
+
+
+# ---------- 设置持久化 ----------
+
+func _test_settings() -> void:
+	var path := "user://test_settings.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	var s := Settings.new()
+	s.path = path
+	s.load_settings()  # 无文件 → 默认值
+	_assert(is_equal_approx(s.volumes.master, 1.0), "默认主音量 100%")
+	_assert(is_equal_approx(s.volumes.music, 0.8), "默认音乐 80%")
+	# F3 循环：100→70→40→0→100
+	_assert(is_equal_approx(s.cycle_master(), 0.7), "第 1 档 70%")
+	_assert(is_equal_approx(s.cycle_master(), 0.4), "第 2 档 40%")
+	_assert(is_equal_approx(s.cycle_master(), 0.0), "第 3 档静音")
+	_assert(is_equal_approx(s.cycle_master(), 1.0), "循环回 100%")
+	# 持久化往返
+	s.volumes.music = 0.33
+	s.save_settings()
+	var s2 := Settings.new()
+	s2.path = path
+	s2.load_settings()
+	_assert(is_equal_approx(s2.volumes.master, 1.0) and absf(s2.volumes.music - 0.33) < 0.001,
+		"设置存盘读回一致")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

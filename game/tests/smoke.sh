@@ -22,13 +22,15 @@ fi
 echo "[smoke] Godot: $GODOT"
 
 echo "[smoke] 1/3 headless --import ..."
-"$GODOT" --headless --path "$GAME" --import || { echo "[smoke] import 失败"; exit 1; }
+"$GODOT" --headless --path "$GAME" --import 2>&1 | tee /tmp/arcgun_smoke.log | grep -E "SCRIPT ERROR|Parse Error" && { echo "[smoke] import 有脚本错误"; exit 1; }
+[ ${PIPESTATUS[0]} -ne 0 ] && { echo "[smoke] import 失败"; exit 1; }
 
 echo "[smoke] 2/3 单元测试 ..."
 "$GODOT" --headless --path "$GAME" --script res://tests/run_tests.gd || { echo "[smoke] 测试失败"; exit 1; }
 
 echo "[smoke] 3/3 headless 启动游戏（300 帧后自动退出）..."
-"$GODOT" --headless --path "$GAME" --quit-after 300 || { echo "[smoke] 游戏启动崩溃"; exit 1; }
+"$GODOT" --headless --path "$GAME" --quit-after 300 2>&1 | tee /tmp/arcgun_smoke.log | grep -E "SCRIPT ERROR|Parse Error" && { echo "[smoke] 运行时有脚本错误"; exit 1; }
+[ ${PIPESTATUS[0]} -ne 0 ] && { echo "[smoke] 游戏启动崩溃"; exit 1; }
 
 # 可选：`bash game/tests/smoke.sh --full` 追加 e2e 命中率定量验证（约 20 秒）
 if [ "${1:-}" = "--full" ]; then

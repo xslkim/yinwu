@@ -8,6 +8,7 @@ extends RefCounted
 const BASE_POINTS := 100
 const GOLD_POINTS := 300
 const HOSTAGE_PENALTY := 200
+const ESCAPE_PENALTY := 50
 
 var score := 0
 var combo := 0
@@ -15,6 +16,7 @@ var peak_combo := 0  ## 连击峰值（结算页展示）
 var hits := 0
 var misses := 0
 var hostage_hits := 0  ## 人质误伤次数
+var escapes := 0       ## 逃靶次数（dwell 超时溜走）
 
 
 ## 命中：连击 +1，返回本次得分；base 由靶型决定
@@ -40,6 +42,18 @@ func register_hostage_hit(penalty := HOSTAGE_PENALTY) -> void:
 	score = maxi(0, score - penalty)
 
 
+## 逃靶：靶子停留超时溜走，扣分（下限 0）+ 清连击
+func register_escape(penalty := ESCAPE_PENALTY) -> void:
+	escapes += 1
+	combo = 0
+	score = maxi(0, score - penalty)
+
+
+## 连击里程碑（×5/×10/×15…）：场景层据此放特殊跳字+音效
+static func is_combo_milestone(p_combo: int) -> bool:
+	return p_combo > 0 and p_combo % 5 == 0
+
+
 func reset() -> void:
 	score = 0
 	combo = 0
@@ -47,6 +61,7 @@ func reset() -> void:
 	hits = 0
 	misses = 0
 	hostage_hits = 0
+	escapes = 0
 
 
 ## 命中率（0-1），无射击时返回 0

@@ -115,9 +115,9 @@ func show_gameover(win: bool, score: ScoreKeeper) -> void:
 	_center_label.text = "全部通关！" if win else "GAME OVER"
 	_center_label.modulate = Color(1.0, 0.85, 0.2) if win else Color(1.0, 0.35, 0.3)
 	_sub_label.text = ""
-	_stats_label.text = "得分  %06d\n命中率  %d%%（%d 中 / %d 发）\n连击峰值  ×%d\n人质误伤  %d 次\n\n—— START / 回车 再来一局 ——" % [
+	_stats_label.text = "得分  %06d\n命中率  %d%%（%d 中 / %d 发）\n连击峰值  ×%d\n人质误伤  %d 次    逃靶  %d 次\n\n—— START / 回车 再来一局 ——" % [
 		score.score, int(score.accuracy() * 100), score.hits, score.hits + score.misses,
-		score.peak_combo, score.hostage_hits]
+		score.peak_combo, score.hostage_hits, score.escapes]
 	_stats_holder.visible = true
 
 

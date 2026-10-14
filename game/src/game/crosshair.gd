@@ -11,6 +11,12 @@ var show_hit_ring := false
 var hit_ring_center := Vector2.ZERO
 var hit_ring_radius := 60.0
 
+var _texture: Texture2D  ## assets/textures/crosshair.png 存在则用贴图准星
+
+
+func _ready() -> void:
+	_texture = AssetLib.texture_or_null("res://assets/textures/crosshair.png")
+
 
 func _process(_delta: float) -> void:
 	queue_redraw()
@@ -18,6 +24,17 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	var main_color := Color.WHITE if fresh else Color(1, 1, 1, 0.35)
+	if _texture:
+		# 贴图准星：64px 见方居中
+		draw_texture(_texture, aim - Vector2(32, 32), main_color)
+	else:
+		_draw_procedural(main_color)
+	if show_hit_ring:
+		draw_circle(hit_ring_center, hit_ring_radius, Color(0.2, 1.0, 0.4, 0.5), false, 2.0)
+
+
+## 程序化准星：黑边白心双层设计，保证在任何背景色上都醒目
+func _draw_procedural(main_color: Color) -> void:
 	var edge := Color(0.08, 0.08, 0.12, main_color.a)  # 与 3D 描边同色
 	# 外圈：先画粗黑边再叠白圈
 	draw_circle(aim, 14.0, edge, false, 5.0)
@@ -28,5 +45,3 @@ func _draw() -> void:
 		draw_line(aim + dir * 8, aim + dir * 22, main_color, 3.0)
 	# 中心点
 	draw_circle(aim, 2.5, Color(1.0, 0.3, 0.2, main_color.a))
-	if show_hit_ring:
-		draw_circle(hit_ring_center, hit_ring_radius, Color(0.2, 1.0, 0.4, 0.5), false, 2.0)

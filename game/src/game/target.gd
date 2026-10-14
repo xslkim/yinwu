@@ -9,7 +9,7 @@ extends Node3D
 ##   hostage 绿身白头 + 两点眼睛（"人脸"感）—— 误伤扣分
 ##   gold    整体 0.65 倍、纯金色、移动快 —— 高分限时
 
-signal expired(target: Target)  ## 停留超时缩回完毕
+signal escaped(target: Target)  ## 停留超时溜走（逃靶）
 
 enum Type { NORMAL, HOSTAGE, GOLD }
 
@@ -50,10 +50,10 @@ func _process(delta: float) -> void:
 		position.x += _direction * absf(speed) * delta
 		if absf(position.x - _origin.x) >= 2.5:
 			_direction *= -1.0
-	# 到时缩回
+	# 到时溜走（逃靶）
 	_dwell_left -= delta
 	if _dwell_left <= 0.0:
-		retract()
+		retract(true)
 
 
 ## 靶心世界坐标（命中判定目标点）
@@ -79,16 +79,27 @@ func destroy_with_hit() -> void:
 	tween.chain().tween_callback(queue_free)
 
 
-## 到时缩回（未被击中）
-func retract() -> void:
+## 缩回消失。is_escape=true 是逃靶（溜走动画：下沉遁地 + 前倾，并发出 escaped 信号）；
+## is_escape=false 是关卡结束清场（安静缩小，不触发惩罚）
+func retract(is_escape := false) -> void:
 	if _dying:
 		return
 	_dying = true
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector3.ZERO, RETRACT_TIME) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-	tween.tween_callback(func(): expired.emit(self))
+	if is_escape:
+		tween.set_parallel(true)
+		tween.tween_property(self, "position:y", position.y - 2.2, RETRACT_TIME * 1.5) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+		tween.tween_property(self, "rotation_degrees:x", 20.0, RETRACT_TIME * 1.5)
+		tween.chain().tween_callback(_emit_escaped)
+	else:
+		tween.tween_property(self, "scale", Vector3.ZERO, RETRACT_TIME) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)
+
+
+func _emit_escaped() -> void:
+	escaped.emit(self)
 
 
 # ---------- 搭建 ----------
@@ -96,17 +107,17 @@ func retract() -> void:
 func _build() -> void:
 	match target_type:
 		Type.NORMAL:
-			_build_body(Color(1.0, 0.8, 0.2), Color(1.0, 0.25, 0.2), true)
+			_build_body(Color(1.0, 0.8, 0.2), Color(1.0, 0.25, 0.2), true, "normal")
 		Type.HOSTAGE:
-			_build_body(Color(0.25, 0.75, 0.35), Color(0.95, 0.95, 0.9), false)
+			_build_body(Color(0.25, 0.75, 0.35), Color(0.95, 0.95, 0.9), false, "hostage")
 			_build_face()
 		Type.GOLD:
-			_build_body(Color(1.0, 0.75, 0.1), Color(1.0, 0.85, 0.15), true)
+			_build_body(Color(1.0, 0.75, 0.1), Color(1.0, 0.85, 0.15), true, "gold")
 			_shrink_head(0.65)
 			base_points = ScoreKeeper.GOLD_POINTS
 
 
-func _build_body(torso_color: Color, head_color: Color, with_dot: bool) -> void:
+func _build_body(torso_color: Color, head_color: Color, with_dot: bool, face_name: String) -> void:
 	var torso := MeshInstance3D.new()
 	var torso_mesh := CylinderMesh.new()
 	torso_mesh.top_radius = 0.4
@@ -129,7 +140,13 @@ func _build_body(torso_color: Color, head_color: Color, with_dot: bool) -> void:
 	head_mesh.radial_segments = 12  # 低多边形感
 	head_mesh.rings = 6
 	head.mesh = head_mesh
-	head.material_override = _flat(head_color)
+	# 贴图接口：assets/textures/face_<type>.png 存在就用，否则程序化纯色
+	var head_mat := _flat(head_color)
+	var face := AssetLib.texture_or_null("res://assets/textures/face_%s.png" % face_name)
+	if face:
+		head_mat.albedo_texture = face
+		head_mat.albedo_color = Color.WHITE  # 有贴图时取消染色
+	head.material_override = head_mat
 	_bullseye.add_child(head)
 	_outline(head)
 
@@ -153,7 +170,7 @@ func _build_body(torso_color: Color, head_color: Color, with_dot: bool) -> void:
 	_bullseye.add_child(body)
 
 
-## 人质的"脸"：两点黑眼睛（无素材时代的表情占位，Week 3 换贴图）
+## 人质的"脸"：两点黑眼睛占位；face_hostage.png 贴图到位后由贴图接管表情
 func _build_face() -> void:
 	for x in [-0.16, 0.16]:
 		var eye := MeshInstance3D.new()
@@ -186,7 +203,7 @@ func _outline(mi: MeshInstance3D, thickness := 0.035) -> void:
 	mat.albedo_color = Color(0.08, 0.08, 0.12)
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.cull_mode = BaseMaterial3D.CULL_FRONT
-	mat.grow_enabled = true
+	mat.grow = true  # Godot 4 属性名（grow_enabled 是 Godot 3 旧名）
 	mat.grow_amount = thickness
 	shell.material_override = mat
 	mi.add_child(shell)

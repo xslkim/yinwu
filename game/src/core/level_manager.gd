@@ -9,7 +9,8 @@ extends RefCounted
 ##   title → playing（倒计时 duration 秒）
 ##   playing → result（结算闪现 2s，判定过关/失败）
 ##   result → 下一关 title；全部过关或中途失败 → gameover（总结算页）
-##   gameover --press_start--> title（再来一局，同步完成，重开延迟 <2s）
+##   gameover --press_start--> title（再来一局，免投币，同步完成，重开延迟 <2s）
+##   attract 无投币 30s → demo（自动演示，不开枪）--insert_coin--> attract
 
 signal level_title_shown(idx: int, def: Dictionary)
 signal level_started(idx: int, def: Dictionary)
@@ -19,6 +20,7 @@ signal state_changed(state: String)
 
 const TITLE_TIME := 1.5
 const RESULT_TIME := 2.0
+const DEMO_AFTER := 30.0  ## 待机多少秒无投币进演示
 
 var levels: Array = []
 var score_keeper: ScoreKeeper
@@ -33,6 +35,7 @@ var start_at := 0          ## 从第几关开打（0 起；调试跳关用，正
 
 var _phase_time := 0.0
 var _level_start_score := 0
+var _attract_idle := 0.0
 
 
 func _init(p_levels: Array, p_score_keeper: ScoreKeeper) -> void:
@@ -42,6 +45,11 @@ func _init(p_levels: Array, p_score_keeper: ScoreKeeper) -> void:
 
 func insert_coin() -> void:
 	credits += 1
+	_attract_idle = 0.0
+	if state == "demo":
+		# 演示中投币：打断回待机页
+		state = "attract"
+		state_changed.emit(state)
 
 
 ## 退出本局回待机页（手机端 EXIT）。gameover 页退出也回待机；待机页返回 false
@@ -73,6 +81,12 @@ func press_start() -> bool:
 ## 每帧推进状态机（由场景层在 _process 调用）
 func tick(dt: float) -> void:
 	match state:
+		"attract":
+			_attract_idle += dt
+			if _attract_idle >= DEMO_AFTER:
+				state = "demo"
+				_attract_idle = 0.0
+				state_changed.emit(state)
 		"title":
 			_phase_time -= dt
 			if _phase_time <= 0.0:
@@ -92,6 +106,7 @@ func tick(dt: float) -> void:
 					_advance_to_title()
 				else:
 					_finish_game()
+		# demo / gameover：无内部计时，等外部事件（投币/开始）
 
 
 func current_level() -> Dictionary:
