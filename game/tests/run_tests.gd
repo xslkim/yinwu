@@ -8,6 +8,9 @@ const Parser = preload("res://src/core/protocol_parser.gd")
 const OneEuro = preload("res://src/core/one_euro_filter.gd")
 const Score = preload("res://src/core/score_keeper.gd")
 const Ammo = preload("res://src/core/ammo_manager.gd")
+const Levels = preload("res://src/core/level_defs.gd")
+const LevelMgr = preload("res://src/core/level_manager.gd")
+const Scheduler = preload("res://src/core/wave_scheduler.gd")
 
 var _pass := 0
 var _fail := 0
@@ -19,6 +22,9 @@ func _init() -> void:
 	_test_one_euro()
 	_test_score()
 	_test_ammo()
+	_test_level_defs()
+	_test_level_flow()
+	_test_wave_scheduler()
 	print("== 结果: 通过 %d / 失败 %d ==" % [_pass, _fail])
 	quit(1 if _fail > 0 else 0)
 
@@ -134,6 +140,30 @@ func _test_score() -> void:
 	s.reset()
 	_assert(s.score == 0 and s.combo == 0, "reset 归零")
 
+	# 连击峰值
+	s = Score.new()
+	s.register_hit(); s.register_hit(); s.register_hit()
+	s.register_miss()
+	s.register_hit()
+	_assert(s.peak_combo == 3, "连击峰值应为 3（实际 %d）" % s.peak_combo)
+	s.reset()
+	_assert(s.peak_combo == 0, "reset 清连击峰值")
+
+	# 金靶底分：300 × 连击
+	s = Score.new()
+	_assert(s.register_hit(Score.GOLD_POINTS) == 300, "金靶首中 300")
+	_assert(s.register_hit(Score.GOLD_POINTS) == 600, "金靶二连 600")
+
+	# 人质误伤：扣分 + 清连击 + 不下负
+	s = Score.new()
+	s.register_hit(); s.register_hit()  # 300 分 2 连击
+	s.register_hostage_hit()
+	_assert(s.score == 100 and s.combo == 0 and s.hostage_hits == 1,
+		"误伤人质扣 200 且清连击")
+	s.register_hostage_hit()
+	_assert(s.score == 0, "扣分下限为 0")
+	_assert(s.register_hit() == 100, "误伤后重新起连击")
+
 
 # ---------- 弹药 ----------
 
@@ -147,3 +177,110 @@ func _test_ammo() -> void:
 	_assert(not a.consume(), "弹空 consume 返回 false")
 	a.reload()
 	_assert(a.current == 6 and a.can_shoot(), "换弹后满 6 发")
+
+
+# ---------- 关卡数据表 ----------
+
+func _test_level_defs() -> void:
+	var levels := Levels.all()
+	_assert(levels.size() == 3, "应有 3 个微关卡")
+	for lv in levels:
+		_assert(lv.duration >= 15.0 and lv.duration <= 30.0, "每关 20-30 秒量级: %s" % lv.title)
+		_assert(lv.goal > 0, "每关要有关卡目标分")
+		_assert(lv.waves.size() > 0, "每关要有波次")
+		var prev_t := -1.0
+		for w in lv.waves:
+			_assert(w.t > prev_t, "波次按时间升序: %s" % lv.title)
+			prev_t = w.t
+			_assert(w.type in ["normal", "hostage", "gold"], "合法靶型: %s" % w.type)
+			_assert(w.t < lv.duration, "波次要出在关卡时限内: %s t=%.1f" % [lv.title, w.t])
+	# 各关特色：1 全固定、2 含人质、3 含金靶
+	_assert(levels[0].waves.all(func(w): return w.speed == 0.0), "关卡 1 全部固定靶")
+	_assert(levels[1].waves.any(func(w): return w.type == "hostage"), "关卡 2 要有人质")
+	_assert(levels[2].waves.any(func(w): return w.type == "gold"), "关卡 3 要有金靶")
+
+
+# ---------- 关卡流转 ----------
+
+## 用极短关卡定义驱动状态机，避免测试真等 25 秒
+func _mini_levels() -> Array:
+	return [
+		{"title": "L1", "duration": 10.0, "goal": 100, "waves": []},
+		{"title": "L2", "duration": 10.0, "goal": 100, "waves": []},
+		{"title": "L3", "duration": 10.0, "goal": 100, "waves": []},
+	]
+
+
+func _test_level_flow() -> void:
+	var s := Score.new()
+	var m := LevelMgr.new(_mini_levels(), s)
+	_assert(m.state == "attract", "初始待机")
+	_assert(not m.press_start(), "没投币不能开始")
+	_assert(m.state == "attract", "开始失败保持待机")
+	m.insert_coin()
+	_assert(m.can_start(), "投币后可开始")
+	_assert(m.press_start(), "投币+开始成功")
+	_assert(m.state == "title" and m.level_idx == 0, "进第 1 关标题")
+
+	# 标题闪现结束 → 开打
+	m.tick(LevelMgr.TITLE_TIME + 0.01)
+	_assert(m.state == "playing", "标题后进入 playing")
+	_assert(absf(m.time_ratio() - 1.0) < 0.01, "开打时计时满格")
+
+	# 打够目标分，时间耗尽 → 过关
+	s.register_hit()  # 100 分 = goal
+	m.tick(10.1)
+	_assert(m.state == "result" and m.last_passed, "达标判过关")
+	_assert(m.level_score == 100, "本关得分独立计算")
+
+	# 结算闪现完 → 下一关标题（状态机同步推进，无场景加载，重开延迟 <2s 由此保证）
+	m.tick(LevelMgr.RESULT_TIME + 0.01)
+	_assert(m.state == "title" and m.level_idx == 1, "过关后进第 2 关")
+
+	# 第 2 关故意不达标 → 失败直接总结算
+	m.tick(LevelMgr.TITLE_TIME + 0.01)
+	m.tick(10.1)
+	_assert(m.state == "result" and not m.last_passed, "不达标判失败")
+	var over := [false]
+	m.game_finished.connect(func(win): over[0] = true; _assert(not win, "中途失败 win=false"))
+	m.tick(LevelMgr.RESULT_TIME + 0.01)
+	_assert(m.state == "gameover", "失败后进总结算")
+	_assert(over[0], "game_finished 信号应发出")
+
+	# 再来一局：同步重置，立刻回标题（断言无延迟 —— 这是 <2s 重开的逻辑保证）
+	m.insert_coin()
+	_assert(m.press_start(), "总结算页可再来一局")
+	_assert(m.state == "title" and m.level_idx == 0 and s.score == 0, "重开归零回第 1 关")
+
+	# 全通关路径：3 关都达标 → win=true
+	s = Score.new()
+	m = LevelMgr.new(_mini_levels(), s)
+	var win_result := [false]
+	m.game_finished.connect(func(win): win_result[0] = win)
+	m.insert_coin()
+	m.press_start()
+	for i in 3:
+		m.tick(LevelMgr.TITLE_TIME + 0.01)
+		s.register_hit()  # 每关 100 分达标
+		m.tick(10.1)
+		_assert(m.last_passed, "第 %d 关应过关" % (i + 1))
+		if m.state == "result":
+			m.tick(LevelMgr.RESULT_TIME + 0.01)
+	_assert(m.state == "gameover", "3 关过完进总结算")
+	_assert(win_result[0], "全通关 win=true")
+
+
+# ---------- 波次调度 ----------
+
+func _test_wave_scheduler() -> void:
+	var sc := Scheduler.new()
+	sc.reset({"waves": [
+		{"t": 1.0, "type": "normal"}, {"t": 2.0, "type": "gold"}, {"t": 2.0, "type": "hostage"},
+	]})
+	_assert(sc.poll(0.5).is_empty(), "没到点不出靶")
+	_assert(sc.poll(1.0).size() == 1, "到点出 1 个")
+	var due := sc.poll(2.0)
+	_assert(due.size() == 2, "同一时刻出 2 个（实际 %d）" % due.size())
+	_assert(due[0].type == "gold" and due[1].type == "hostage", "同时刻保持表内顺序")
+	_assert(sc.exhausted(), "全部派完")
+	_assert(sc.poll(99.0).is_empty(), "派完后不再出")
